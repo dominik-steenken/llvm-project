@@ -9530,18 +9530,17 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
 
   // execute VSUM.
   switch (OpVT.getScalarSizeInBits()) {
-  case (8):
-  case (16):
+  case 8:
+  case 16:
     Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op,
                      DAG.getBitcast(OpVT, Zero));
     LLVM_FALLTHROUGH;
-  case (32):
-  case (64):
+  case 32:
+  case 64:
     Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::i128, Op,
                      DAG.getBitcast(Op.getValueType(), Zero));
     break;
-  case (128):
-    return Op;
+  case 128:
     break; // VSUM over v1i128 should not happen and would be a noop
   default:
     llvm_unreachable("Unexpected scalar size.");
