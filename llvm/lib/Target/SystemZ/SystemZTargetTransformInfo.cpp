@@ -1325,8 +1325,18 @@ SystemZTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 }
 
 bool SystemZTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  // Always expand on Subtargets without vector instructions
   if (!ST->hasVector())
     return true;
+
+  // Always expand for operands that do not fill one vector reg
+  auto *Type = cast<FixedVectorType>(II->getOperand(0)->getType());
+  unsigned NumElts = Type->getNumElements();
+  unsigned MaxElts = SystemZ::VectorBits / Type->getScalarSizeInBits();
+  if (NumElts < MaxElts)
+    return true;
+
+  // Do not expand vector.reduce.add in other cases
   switch (II->getIntrinsicID()) {
   case Intrinsic::vector_reduce_add:
     return false;
