@@ -522,6 +522,7 @@ def : InstRW<[WLat1, FXa, NormalGr], (instregex "LH(H|L)R$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "LL(HH|CH)(L|H)R$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBL(G|H|L)(Z)?$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "LL(H|C)(L|F)(H)?R$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "S(R|L)L(L|H)(L|H)$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBMux$")>;
 
 // Rotate and Select
