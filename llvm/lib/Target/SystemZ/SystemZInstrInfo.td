@@ -1567,6 +1567,14 @@ let Predicates = [FeatureHighWord] in {
   def LLHHLR  : FixedRotateSelectRIEf<"llhhlr", 0xEC5D, GRH32, GR64, 16, !or(128, 31), 32>;
   def LLCHHR  : FixedRotateSelectRIEf<"llchhr", 0xEC5D, GRH32, GR64, 24, !or(128, 31), 0>;
   def LLCHLR  : FixedRotateSelectRIEf<"llchlr", 0xEC5D, GRH32, GR64, 24, !or(128, 31), 32>;
+  let isAsmParserOnly = 1 in {
+    def SLLHH   : ComputedRotateSelectRIEf<"sllhh", 0xEC5D, GR32, GR64, 1, "fixSLLHH">;
+    def SLLHL   : ComputedRotateSelectRIEf<"sllhl", 0xEC5D, GR32, GR64, 2, "fixSLLHL">;
+    def SRLHH   : ComputedRotateSelectRIEf<"srlhh", 0xEC5D, GR32, GR64, 3, "fixSRLHH">;
+    def SRLHL   : ComputedRotateSelectRIEf<"srlhl", 0xEC5D, GR32, GR64, 4, "fixSRLHL">;
+    def SLLLH   : ComputedRotateSelectRIEf<"slllh", 0xEC51, GR32, GR64, 5, "fixSLLLH">;
+    def SRLLH   : ComputedRotateSelectRIEf<"srllh", 0xEC51, GR32, GR64, 6, "fixSRLLH">;
+  }
 }
 
 // Rotate second operand left and perform a logical operation with selected

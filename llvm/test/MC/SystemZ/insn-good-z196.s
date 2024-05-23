@@ -1864,6 +1864,21 @@
 	llchhr	%r8, %r9
 	llchlr	%r10, %r11
 
+#CHECK: sllhh   %r0, %r1, 14            # encoding: [0xec,0x01,0x00,0x91,0x0e,0x5d]
+#CHECK: sllhl   %r0, %r1, 14            # encoding: [0xec,0x01,0x00,0x91,0x2e,0x5d]
+# strange that it's f2 here and not f3...
+#CHECK: srlhh   %r0, %r1, 14            # encoding: [0xec,0x01,0x0e,0x9f,0xf2,0x5d]
+#CHECK: srlhl   %r0, %r1, 14            # encoding: [0xec,0x01,0x0e,0x9f,0x12,0x5d]
+#CHECK: slllh   %r0, %r1, 14            # encoding: [0xec,0x01,0x00,0x91,0x2e,0x51]
+#CHECK: srllh   %r0, %r1, 14            # encoding: [0xec,0x01,0x0e,0x9f,0x12,0x51]
+	sllhh	%r0, %r1, 14
+	sllhl	%r0, %r1, 14
+	srlhh	%r0, %r1, 14
+	srlhl	%r0, %r1, 14
+	slllh	%r0, %r1, 14
+	srllh	%r0, %r1, 14
+
+
 #CHECK: rrbm	%r0, %r0                # encoding: [0xb9,0xae,0x00,0x00]
 #CHECK: rrbm	%r0, %r15               # encoding: [0xb9,0xae,0x00,0x0f]
 #CHECK: rrbm	%r15, %r0               # encoding: [0xb9,0xae,0x00,0xf0]
