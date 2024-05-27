@@ -1286,22 +1286,30 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
   return NumVectorMemOps + NumPermutes;
 }
 
+bool isBitwiseBinaryReduction(Intrinsic::ID id) {
+  return (id == Intrinsic::vector_reduce_and) ||
+         (id == Intrinsic::vector_reduce_or) ||
+         (id == Intrinsic::vector_reduce_xor);
+}
+
 static int
 getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                             const SmallVectorImpl<Type *> &ParamTys) {
   if (RetTy->isVectorTy() && ID == Intrinsic::bswap)
     return getNumVectorRegs(RetTy); // VPERM
 
-  if (ID == Intrinsic::vector_reduce_add) {
-    // Retrieve number and size of elements for the vector op.
+  switch (ID) {
+  case Intrinsic::vector_reduce_add: {
     auto *VTy = cast<FixedVectorType>(ParamTys.front());
+    // Size of each element in bits.
     unsigned ScalarSize = VTy->getScalarSizeInBits();
     // For scalar sizes >128 bits, we fall back to the generic cost estimate.
     if (ScalarSize > SystemZ::VectorBits)
       return -1;
     // This many vector regs are needed to represent the input elements (V).
     unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
-    // This many instructions are needed for the final sum of vector elems (S).
+    // This many instructions are needed for the final sum of vector elems
+    // (S).
     unsigned LastVectorHandling = (ScalarSize < 32) ? 3 : 2;
     // We use vector adds to create a sum vector, which takes
     // V/2 + V/4 + ... = V - 1 operations.
@@ -1310,6 +1318,135 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
     int Cost = VectorRegsNeeded + LastVectorHandling - 1;
     return Cost;
   }
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_mul: {
+    auto *VTy = cast<FixedVectorType>(ParamTys.front());
+    // Size of each element in bits.
+    unsigned ScalarSize = VTy->getScalarSizeInBits();
+    // A single vector register can hold this many elements.
+    unsigned MaxElemsPerVector = SystemZ::VectorBits / ScalarSize;
+    // For scalar sizes >128 bits, we fall back to the generic cost estimate.
+    if (ScalarSize > SystemZ::VectorBits)
+      return -1;
+    // special case handling for bitwise binary i1, since the generated code
+    // is very different.
+    if ((ScalarSize == 1) && isBitwiseBinaryReduction(ID)) {
+      switch (VTy->getNumElements()) {
+      // v1i1 uses 1 instruction.
+      case 1:
+        return 1;
+      // other powers of 2 up to 128 use 3 instructions.
+      case 2:
+      case 4:
+      case 8:
+      case 16:
+      case 32:
+      case 64:
+      case 128:
+        return 3;
+      // element counts outside of that generate unexcpectedly long code. Fall
+      // back to default.
+      default:
+        return -1;
+      }
+    }
+    // The remainder is for vector reductions on legal integer types.
+    // This many vector regs are needed to represent the input elements
+    // (V).
+    unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
+    // This many instructions are needed for the final sum of vector elems
+    // (S).
+    unsigned LastVectorHandling =
+        2 * Log2_32_Ceil(std::min(VTy->getNumElements(), MaxElemsPerVector));
+    // We use vector ops to create an aggregate vector, which takes
+    // V/2 + V/4 + ... = V - 1 operations.
+    // Then, we need S operations to continue the operation on the elements
+    // of the aggregate vector, for a total of V + S - 1 operations.
+    int Cost = VectorRegsNeeded + LastVectorHandling - 1;
+    return Cost;
+  }
+  case Intrinsic::fmuladd: {
+    auto *FirstParm = ParamTys.front();
+    if (FirstParm->isVectorTy()) {
+      auto *VTy = cast<FixedVectorType>(FirstParm);
+      // Size of each element in bits.
+      unsigned ScalarSize = VTy->getScalarSizeInBits();
+      // both vXf32 and vXf64 fmuladd need getNumVectorRegs instructions
+      if ((ScalarSize == 32) || (ScalarSize == 64)) {
+        return getNumVectorRegs(VTy);
+      }
+    }
+    break;
+  }
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul: {
+    auto *VTy = cast<FixedVectorType>(ParamTys.back());
+    // Size of each element in bits.
+    unsigned ScalarSize = VTy->getScalarSizeInBits();
+    // For scalar sizes >64 bits, we fall back to the generic cost estimate.
+    if (ScalarSize > 64)
+      return -1;
+    // A single vector register can hold this many elements.
+    unsigned MaxElemsPerVector = SystemZ::VectorBits / ScalarSize;
+
+    int WholeVectors = VTy->getNumElements() / MaxElemsPerVector;
+    int ElementsRemaining = VTy->getNumElements() % MaxElemsPerVector;
+    int Cost = 0;
+    // Each element is added to the total by a single add, and each element,
+    // except for the first one, needs a `vrep` instruction to get it to
+    // position 0 in the vector. Thus, we need
+    //         2*WholeVectors*ElemsPerVector - WholeVectors
+    // instructions for elements contained in full legal vectors.
+    // For the remainder, we need 1 add for the first element, and then
+    // 2 instructions for each subsequent one, i.e.
+    //         1 + 2 * (ElementsRemaining - 1)
+    // instructions.
+    if (WholeVectors > 0) {
+      Cost += 2 * VTy->getNumElements() - WholeVectors;
+    }
+    if (ElementsRemaining > 0) {
+      Cost += 1 + 2 * (ElementsRemaining - 1);
+    }
+    LLVM_DEBUG(dbgs() << "Returning Cost " << Cost << "\n";);
+    return Cost;
+  }
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimum: {
+    auto *VTy = cast<FixedVectorType>(ParamTys.front());
+    // Size of each element in bits.
+    unsigned ScalarSize = VTy->getScalarSizeInBits();
+    // A single vector register can hold this many elements.
+    unsigned MaxElemsPerVector = SystemZ::VectorBits / ScalarSize;
+    // For scalar sizes >128 bits, we fall back to the generic cost estimate.
+    if (ScalarSize > SystemZ::VectorBits)
+      return -1;
+    // The remainder is for vector reductions on float or double.
+    // This many vector regs are needed to represent the input elements
+    // (V).
+    unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
+    // This many instructions are needed for the final vector (S).
+    unsigned LastVectorHandling =
+        2 * std::min(VTy->getNumElements(), MaxElemsPerVector) - 2;
+    // We use vector ops to create an aggregate vector, which takes
+    // V/2 + V/4 + ... = V - 1 operations.
+    // Then, we need 2 operations per element (S) to continue the operation
+    // on the elements of the aggregate vector, for a total of V + S - 1
+    // operations.
+    int Cost = VectorRegsNeeded + LastVectorHandling - 1;
+    return Cost;
+  }
+  default:
+    return -1;
+  }
+  // otherwise, use generic cost estimate.
   return -1;
 }
 
