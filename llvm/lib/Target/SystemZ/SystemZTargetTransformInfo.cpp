@@ -1431,6 +1431,33 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
     }
     break;
   }
+  case Intrinsic::cttz: {
+    if (ScalarSize == 1)
+      return 2;
+    if ((ScalarSize > 2) && (ScalarSize < 64))
+      return 4;
+    if (ScalarSize == 64)
+      return 3;
+    break;
+  }
+  case Intrinsic::ctlz: {
+    switch (ScalarSize) {
+    case 1:
+    case 32:
+      return 2;
+    case 2:
+    case 4:
+      return 5;
+    case 8:
+    case 16:
+      return 3;
+    case 64:
+      return 1;
+    case 128:
+      return 16;
+    }
+    break;
+  }
   default:
     return -1;
   }
