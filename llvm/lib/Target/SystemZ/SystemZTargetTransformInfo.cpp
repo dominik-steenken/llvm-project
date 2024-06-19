@@ -1309,9 +1309,9 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
   unsigned MaxElemsPerVector = 0;
   // Grab the Vector Parameter, if it exists. This works for all
   // vector reduction intrinsics.
-  if (ParamTys.front()->isVectorTy())
+  if (!ParamTys.empty() && (ParamTys.front()->isVectorTy()))
     VTy = cast<FixedVectorType>(ParamTys.front());
-  else if (ParamTys.back()->isVectorTy())
+  else if (!ParamTys.empty() && (ParamTys.back()->isVectorTy()))
     VTy = cast<FixedVectorType>(ParamTys.back());
   // If there is a Vector Parameter, get derived info.
   if (VTy != nullptr) {
