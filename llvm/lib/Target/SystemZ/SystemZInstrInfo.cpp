@@ -1170,6 +1170,10 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   switch (Opc) {
   default:
     break;
+  // Integer Ops
+  case SystemZ::G_ADD:
+  case SystemZ::G_SUB:
+    return true;
   // Adds and multiplications.
   case SystemZ::WFADB:
   case SystemZ::WFASB:
