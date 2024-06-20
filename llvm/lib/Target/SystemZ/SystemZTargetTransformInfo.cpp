@@ -1291,49 +1291,45 @@ bool isBitwiseBinaryReduction(Intrinsic::ID ID) {
          (ID == Intrinsic::vector_reduce_xor);
 }
 
+typedef struct {
+  unsigned int ScalarSize;
+  unsigned int NumElements;
+  unsigned int VectorRegsNeeded;
+  unsigned int MaxElemsPerVector;
+  FixedVectorType *VTy;
+} VectorInfo;
+
+void getVectorInfo(VectorInfo &Info, Type *Type) {
+  Info.VTy = cast<FixedVectorType>(Type);
+  Info.ScalarSize = Info.VTy->getScalarSizeInBits();
+  Info.NumElements = Info.VTy->getNumElements();
+  Info.VectorRegsNeeded = getNumVectorRegs(Info.VTy);
+  Info.MaxElemsPerVector = SystemZ::VectorBits / Info.ScalarSize;
+}
+
 static int
 getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                             const SmallVectorImpl<Type *> &ParamTys) {
   if (RetTy->isVectorTy() && ID == Intrinsic::bswap)
     return getNumVectorRegs(RetTy); // VPERM
 
-  // Holds vector parameter type, if any.
-  FixedVectorType *VTy = nullptr;
-  // Size of each element of the vector parameter, in bits.
-  unsigned int ScalarSize = 0;
-  // // Number of elements in the vector.
-  unsigned int NumElements = 0;
-  // This many legal vectors are needed to represent the vector parameter (V).
-  unsigned int VectorRegsNeeded = 0;
-  // This many scalars fit into a legal vector.
-  unsigned MaxElemsPerVector = 0;
-  // Grab the Vector Parameter, if it exists. This works for all
-  // vector reduction intrinsics.
-  if (ParamTys.front()->isVectorTy())
-    VTy = cast<FixedVectorType>(ParamTys.front());
-  else if (ParamTys.back()->isVectorTy())
-    VTy = cast<FixedVectorType>(ParamTys.back());
-  // If there is a Vector Parameter, get derived info.
-  if (VTy != nullptr) {
-    ScalarSize = VTy->getScalarSizeInBits();
-    NumElements = VTy->getNumElements();
-    VectorRegsNeeded = getNumVectorRegs(VTy);
-    MaxElemsPerVector = SystemZ::VectorBits / ScalarSize;
-  }
-  // For scalar sizes >128 bits, we fall back to the generic cost estimate.
-  if (ScalarSize > SystemZ::VectorBits)
-    return -1;
+  // Holds info about vector parameters, if any.
+  VectorInfo Vinfo;
 
   switch (ID) {
   case Intrinsic::vector_reduce_add: {
+    getVectorInfo(Vinfo, ParamTys.front());
+    // For scalar sizes >128 bits, we fall back to the generic cost estimate.
+    if (Vinfo.ScalarSize > SystemZ::VectorBits)
+      return -1;
     // This many instructions are needed for the final sum of vector elems
     // (S).
-    unsigned LastVectorHandling = (ScalarSize < 32) ? 3 : 2;
+    unsigned LastVectorHandling = (Vinfo.ScalarSize < 32) ? 3 : 2;
     // We use vector adds to create a sum vector, which takes
     // V/2 + V/4 + ... = V - 1 operations.
     // Then, we need S operations to sum up the elements of that sum vector,
     // for a total of V + S - 1 operations.
-    return VectorRegsNeeded + LastVectorHandling - 1;
+    return Vinfo.VectorRegsNeeded + LastVectorHandling - 1;
   }
   case Intrinsic::vector_reduce_umax:
   case Intrinsic::vector_reduce_umin:
@@ -1343,10 +1339,11 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
   case Intrinsic::vector_reduce_mul: {
+    getVectorInfo(Vinfo, ParamTys.front());
     // special case handling for bitwise binary i1, since the generated code
     // is very different.
-    if ((ScalarSize == 1) && isBitwiseBinaryReduction(ID)) {
-      switch (NumElements) {
+    if ((Vinfo.ScalarSize == 1) && isBitwiseBinaryReduction(ID)) {
+      switch (Vinfo.NumElements) {
       // v1i1 uses 1 instruction.
       case 1:
         return 1;
@@ -1369,29 +1366,31 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
     // This many instructions are needed for the final sum of vector elems
     // (S).
     unsigned LastVectorHandling =
-        2 * Log2_32_Ceil(std::min(NumElements, MaxElemsPerVector));
+        2 * Log2_32_Ceil(std::min(Vinfo.NumElements, Vinfo.MaxElemsPerVector));
     // We use vector ops to create an aggregate vector, which takes
     // V/2 + V/4 + ... = V - 1 operations.
     // Then, we need S operations to continue the operation on the elements
     // of the aggregate vector, for a total of V + S - 1 operations.
-    int Cost = VectorRegsNeeded + LastVectorHandling - 1;
+    int Cost = Vinfo.VectorRegsNeeded + LastVectorHandling - 1;
     return Cost;
   }
   case Intrinsic::fmuladd: {
+    getVectorInfo(Vinfo, ParamTys.front());
     // here, we only consider the vector parm case for fmuladd.
-    if (VTy != nullptr) {
+    if (Vinfo.VTy != nullptr) {
       // both vXf32 and vXf64 fmuladd need getNumVectorRegs instructions
-      if ((ScalarSize == 32) || (ScalarSize == 64))
-        return VectorRegsNeeded;
+      if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64))
+        return Vinfo.VectorRegsNeeded;
     }
     break;
   }
   case Intrinsic::vector_reduce_fadd:
   case Intrinsic::vector_reduce_fmul: {
+    getVectorInfo(Vinfo, ParamTys.back());
     // This computation is for vector reductions on float or double.
-    if ((ScalarSize == 32) || (ScalarSize == 64)) {
-      int WholeVectors = NumElements / MaxElemsPerVector;
-      int ElementsRemaining = NumElements % MaxElemsPerVector;
+    if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64)) {
+      int WholeVectors = Vinfo.NumElements / Vinfo.MaxElemsPerVector;
+      int ElementsRemaining = Vinfo.NumElements % Vinfo.MaxElemsPerVector;
       int Cost = 0;
       // Each element is added to the total by a single add, and each element,
       // except for the first one, needs a `vrep` instruction to get it to
@@ -1403,7 +1402,7 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
       //         1 + 2 * (ElementsRemaining - 1)
       // instructions.
       if (WholeVectors > 0) {
-        Cost += 2 * NumElements - WholeVectors;
+        Cost += 2 * Vinfo.NumElements - WholeVectors;
       }
       if (ElementsRemaining > 0) {
         Cost += 1 + 2 * (ElementsRemaining - 1);
@@ -1416,17 +1415,18 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fmaximum:
   case Intrinsic::vector_reduce_fminimum: {
+    getVectorInfo(Vinfo, ParamTys.front());
     // This computation is for vector reductions on float or double.
-    if ((ScalarSize == 32) || (ScalarSize == 64)) {
+    if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64)) {
       // This many instructions are needed for the final vector (S).
       unsigned LastVectorHandling =
-          2 * std::min(NumElements, MaxElemsPerVector) - 2;
+          2 * std::min(Vinfo.NumElements, Vinfo.MaxElemsPerVector) - 2;
       // We use vector ops to create an aggregate vector, which takes
       // V/2 + V/4 + ... = V - 1 operations.
       // Then, we need 2 operations per element (S) to continue the operation
       // on the elements of the aggregate vector, for a total of V + S - 1
       // operations.
-      int Cost = VectorRegsNeeded + LastVectorHandling - 1;
+      int Cost = Vinfo.VectorRegsNeeded + LastVectorHandling - 1;
       return Cost;
     }
     break;
