@@ -31,6 +31,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "systemz-target-machine"
+
 static cl::opt<bool> EnableMachineCombinerPass(
     "systemz-machine-combiner",
     cl::desc("Enable the machine combiner pass"),
@@ -261,8 +263,14 @@ bool SystemZPassConfig::addInstSelector() {
 bool SystemZPassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
 
-  if (EnableMachineCombinerPass)
+  LLVM_DEBUG(dbgs() << "bool SystemZPassConfig::addILPOpts()"
+                    << "\n";);
+
+  if (EnableMachineCombinerPass) {
+    LLVM_DEBUG(dbgs() << "EnableMachineCombinerPass"
+                      << "\n";);
     addPass(&MachineCombinerID);
+  }
 
   return true;
 }
