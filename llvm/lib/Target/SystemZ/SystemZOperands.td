@@ -356,6 +356,10 @@ defm imm32zx4even : Immediate<i32, [{
   return N->getAPIntValue().isIntN(4);
 }], UIMM8EVEN, "U4Imm">;
 
+defm imm32zx6 : Immediate<i32, [{
+  return N->getAPIntValue().isIntN(8);
+}], UIMM8, "U8Imm">;
+
 defm imm32sx8 : Immediate<i32, [{
   return N->getAPIntValue().isSignedIntN(8);
 }], SIMM8, "S8Imm">;

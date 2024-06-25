@@ -111,11 +111,16 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 // NOPs.  These are again variants of the conditional branches, with the
 // condition mask set to "never".  NOP_bare can't be an InstAlias since it
 // would need R0D hard coded which is not part of ADDR64BitRegClass.
-def NOP  : InstAlias<"nop\t$XBD", (BCAsm 0, bdxaddr12only:$XBD), 0>;
+def NOP : NeverCondBranchRX<"nop", 0x47>;
 let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
   def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
-def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
-def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
+def NOPR : NeverCondBranchRR<"nopr", 0x07>;
+def NOPR_bare : InstAlias<"nopr", (NOPR R0D), 0>;
+// def NOP  : InstAlias<"nop\t$XBD", (BCAsm 0, bdxaddr12only:$XBD), 0>;
+// let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
+//   def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
+// def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
+// def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
 
 // An alias of BRC 0, label
 def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
@@ -464,6 +469,8 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def LLILF : UnaryRIL<"llilf", 0xC0F, bitconvert, GR64, imm64lf32>;
   def LLIHF : UnaryRIL<"llihf", 0xC0E, bitconvert, GR64, imm64hf32>;
 }
+def LLGFI : InstAlias<"llgfi\t$R1, $RI1",(LLILF GR64:$R1, imm64lf32:$RI1)>;
+def LLGHI : InstAlias<"llghi\t$R1, $RI1",(LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
@@ -973,6 +980,7 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def IILF : UnaryRIL<"iilf", 0xC09, bitconvert, GR32, uimm32>;
   def IIHF : UnaryRIL<"iihf", 0xC08, bitconvert, GRH32, uimm32>;
 }
+def LFI : InstAlias<"lfi\t$R1, $RI1",(IILF GR32:$R1, uimm32:$RI1)>;
 def IILF64 : BinaryAliasRIL<insertlf, GR64, imm64lf32>;
 def IIHF64 : BinaryAliasRIL<inserthf, GR64, imm64hf32>;
 
@@ -1372,6 +1380,10 @@ let Predicates = [FeatureMiscellaneousExtensions3],
   let isCommutable = 1, CCValues = 0xC, CompareZeroCCMask = 0x8 in {
     def NORK : BinaryRRFa<"nork", 0xB976, nor, GR32, GR32, GR32>;
     def NOGRK : BinaryRRFa<"nogrk", 0xB966, nor, GR64, GR64, GR64>;
+    let isAsmParserOnly = 1 in {
+      def NOTR : UnaryRRFa<"notr", 0xB976, nor, GR32, GR32>;
+      def NOTGR : UnaryRRFa<"notgr", 0xB966, nor, GR64, GR64>;
+    }
   }
 
   // NXOR.
@@ -1526,13 +1538,17 @@ def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 let Defs = [CC] in {
   let isCodeGenOnly = 1 in
     def RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
-  let CCValues = 0xE, CompareZeroCCMask = 0xE in
+  let CCValues = 0xE, CompareZeroCCMask = 0xE in {
     def RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    def RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 1>;
+  }
 }
 
 // On zEC12 we have a variant of RISBG that does not set CC.
-let Predicates = [FeatureMiscellaneousExtensions] in
+let Predicates = [FeatureMiscellaneousExtensions] in {
   def RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+  def RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 1>;
+}
 
 // Forms of RISBG that only affect one word of the destination register.
 // They do not set CC.
@@ -1544,15 +1560,38 @@ let Predicates = [FeatureHighWord] in {
   def RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
   def RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
   def RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
+  def RISBLGZ : RotateSelectRIEf<"risblgz", 0xEC51, GR32, GR64, 0, 1>;
+  def LLHFR   : FixedRotateSelectRIEf<"llhfr", 0xEC51, GRH32, GR64, 0, 31, 32, 1>;
+  def LLHLHR  : FixedRotateSelectRIEf<"llhlhr", 0xEC51, GR32, GR64, 16, 31, 32, 1>;
+  def LLCLHR  : FixedRotateSelectRIEf<"llclhr", 0xEC51, GR32, GR64, 24, 31, 32, 1>;
+  def RISBHGZ : RotateSelectRIEf<"risbhgz", 0xEC5D, GRH32, GR64, 0, 1>;
+  def LHHR    : FixedRotateSelectRIEf<"lhhr", 0xEC5D, GRH32, GR64, 0, 31, 0, 1>;
+  def LHLR    : FixedRotateSelectRIEf<"lhlr", 0xEC5D, GRH32, GR64, 0, 31, 32, 1>;
+  def LLHHHR  : FixedRotateSelectRIEf<"llhhhr", 0xEC5D, GRH32, GR64, 16, 31, 0, 1>;
+  def LLHHLR  : FixedRotateSelectRIEf<"llhhlr", 0xEC5D, GRH32, GR64, 16, 31, 32, 1>;
+  def LLCHHR  : FixedRotateSelectRIEf<"llchhr", 0xEC5D, GRH32, GR64, 24, 31, 0, 1>;
+  def LLCHLR  : FixedRotateSelectRIEf<"llchlr", 0xEC5D, GRH32, GR64, 24, 31, 32, 1>;
 }
 
 // Rotate second operand left and perform a logical operation with selected
 // bits of the first operand.  The CC result only describes the selected bits,
 // so isn't useful for a full comparison against zero.
 let Defs = [CC] in {
-  def RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
-  def ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
-  def RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
+  def RNSBG  : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
+  def RNSBGT : RotateSelectRIEf<"rnsbgt", 0xEC54, GR64, GR64, 1>;
+  def NHHR   : FixedRotateSelectRIEf<"nhhr", 0xEC54, GR64, GR64, 0, 31>;
+  def NHLR   : FixedRotateSelectRIEf<"nhlr", 0xEC54, GR64, GR64, 0, 31, 32>;
+  def NLHR   : FixedRotateSelectRIEf<"nlhr", 0xEC54, GR64, GR64, 32, 63, 32>;
+  def ROSBG  : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
+  def ROSBGT : RotateSelectRIEf<"rosbgt", 0xEC56, GR64, GR64, 1>;
+  def OHHR   : FixedRotateSelectRIEf<"ohhr", 0xEC56, GR64, GR64, 0, 31>;
+  def OHLR   : FixedRotateSelectRIEf<"ohlr", 0xEC56, GR64, GR64, 0, 31, 32>;
+  def OLHR   : FixedRotateSelectRIEf<"olhr", 0xEC56, GR64, GR64, 32, 63, 32>;
+  def RXSBG  : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
+  def RXSBGT : RotateSelectRIEf<"rxsbgt", 0xEC57, GR64, GR64, 1>;
+  def XHHR   : FixedRotateSelectRIEf<"xhhr", 0xEC57, GR64, GR64, 0, 31>;
+  def XHLR   : FixedRotateSelectRIEf<"xhlr", 0xEC57, GR64, GR64, 0, 31, 32>;
+  def XLHR   : FixedRotateSelectRIEf<"xlhr", 0xEC57, GR64, GR64, 32, 63, 32>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2330,6 +2369,8 @@ defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
 
 def JCT   : MnemonicAlias<"jct", "brct">;
 def JCTG  : MnemonicAlias<"jctg", "brctg">;
+def JC    : MnemonicAlias<"jc", "brc">;
+def JCTH  : MnemonicAlias<"jcth", "brcth">;
 def JAS   : MnemonicAlias<"jas", "bras">;
 def JASL  : MnemonicAlias<"jasl", "brasl">;
 def JXH   : MnemonicAlias<"jxh", "brxh">;
