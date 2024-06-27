@@ -1136,10 +1136,13 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
     Opc = *InverseOpcode;
   }
 
+  LLVM_DEBUG(dbgs() << "SystemZInstrInfo::isAssociativeAndCommutative(Inst("
+                    << Opc << "), Invert=" << Invert << ")";);
+
   switch (Opc) {
   default:
     break;
-  // Adds and multiplications.
+  // FP Adds and multiplications.
   case SystemZ::WFADB:
   case SystemZ::WFASB:
   case SystemZ::WFAXB:
@@ -1152,6 +1155,23 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case SystemZ::VFMSB:
     return (Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
+  case SystemZ::SR:
+  case SystemZ::SGR:
+  case SystemZ::AR:
+  case SystemZ::AGR:
+  case SystemZ::SRK:
+  case SystemZ::SGRK:
+  case SystemZ::ARK:
+  case SystemZ::AGRK:
+    LLVM_DEBUG(
+        dbgs() << "Flags: (NoUWrap="
+               << Inst.getFlag(MachineInstr::MIFlag::NoUWrap)
+               << ", NoSWrap=" << Inst.getFlag(MachineInstr::MIFlag::NoSWrap)
+               << ", NoUSWrap=" << Inst.getFlag(MachineInstr::MIFlag::NoUSWrap)
+               << ")\n";);
+    return !(Inst.getFlag(MachineInstr::MIFlag::NoUWrap) ||
+             Inst.getFlag(MachineInstr::MIFlag::NoSWrap) ||
+             Inst.getFlag(MachineInstr::MIFlag::NoUSWrap));
   }
 
   return false;
@@ -1161,6 +1181,10 @@ std::optional<unsigned>
 SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
   // fadd => fsub
   switch (Opcode) {
+  case SystemZ::AR:
+    return SystemZ::SR;
+  case SystemZ::AGR:
+    return SystemZ::SGR;
   case SystemZ::WFADB:
     return SystemZ::WFSDB;
   case SystemZ::WFASB:
@@ -1172,6 +1196,10 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
   case SystemZ::VFASB:
     return SystemZ::VFSSB;
   // fsub => fadd
+  case SystemZ::SR:
+    return SystemZ::AR;
+  case SystemZ::SGR:
+    return SystemZ::AGR;
   case SystemZ::WFSDB:
     return SystemZ::WFADB;
   case SystemZ::WFSSB:
