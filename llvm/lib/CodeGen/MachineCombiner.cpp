@@ -578,6 +578,8 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
+    LLVM_DEBUG(dbgs() << "Considering MI " << MI.getDesc().getOpcode()
+                      << "\n";);
     SmallVector<unsigned, 16> Patterns;
     // The motivating example is:
     //
@@ -606,13 +608,16 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
     // machine-combiner-verify-pattern-order is enabled, all patterns are
     // checked to ensure later patterns do not provide better latency savings.
 
-    if (!TII->getMachineCombinerPatterns(MI, Patterns, DoRegPressureReduce))
+    if (!TII->getMachineCombinerPatterns(MI, Patterns, DoRegPressureReduce)) {
+      LLVM_DEBUG(dbgs() << "No Machine Combiner Patterns were returned\n";);
       continue;
+    }
 
     if (VerifyPatternOrder)
       verifyPatternOrder(MBB, MI, Patterns);
 
     for (const auto P : Patterns) {
+      LLVM_DEBUG(dbgs() << "Considering Pattern " << P << "\n";);
       SmallVector<MachineInstr *, 16> InsInstrs;
       SmallVector<MachineInstr *, 16> DelInstrs;
       DenseMap<unsigned, unsigned> InstrIdxForVirtReg;
@@ -621,8 +626,11 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
       // Found pattern, but did not generate alternative sequence.
       // This can happen e.g. when an immediate could not be materialized
       // in a single instruction.
-      if (InsInstrs.empty())
+      if (InsInstrs.empty()) {
+        LLVM_DEBUG(
+            dbgs() << "Pattern did not genearte an alternative sequence\n";);
         continue;
+      }
 
       LLVM_DEBUG(if (dump_intrs) {
         dbgs() << "\tFor the Pattern (" << (int)P
