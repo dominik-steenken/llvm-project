@@ -1156,22 +1156,27 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case SystemZ::VFMSB:
     return (Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
-  case SystemZ::SR:
-  case SystemZ::SGR:
   case SystemZ::AR:
   case SystemZ::AGR:
-  case SystemZ::SRK:
-  case SystemZ::SGRK:
+  case SystemZ::AGFR:
   case SystemZ::ARK:
   case SystemZ::AGRK:
     LLVM_DEBUG(
         dbgs() << "Flags: (NoUWrap="
-               << Inst.getFlag(MachineInstr::MIFlag::NoUWrap)
-               << ", NoSWrap=" << Inst.getFlag(MachineInstr::MIFlag::NoSWrap)
-               << ", NoUSWrap=" << Inst.getFlag(MachineInstr::MIFlag::NoUSWrap)
-               << ")\n";);
+               << Inst.getFlag(MachineInstr::MIFlag::NoUWrap) << ", NoUSWrap="
+               << Inst.getFlag(MachineInstr::MIFlag::NoUSWrap) << ")\n";);
+    return !(Inst.getFlag(MachineInstr::MIFlag::NoSWrap) ||
+             Inst.getFlag(MachineInstr::MIFlag::NoUSWrap));
+  case SystemZ::ALR:
+  case SystemZ::ALGR:
+  case SystemZ::ALGFR:
+  case SystemZ::ALRK:
+  case SystemZ::ALGRK:
+    LLVM_DEBUG(
+        dbgs() << "Flags: (NoUWrap="
+               << Inst.getFlag(MachineInstr::MIFlag::NoSWrap) << ", NoUSWrap="
+               << Inst.getFlag(MachineInstr::MIFlag::NoUSWrap) << ")\n";);
     return !(Inst.getFlag(MachineInstr::MIFlag::NoUWrap) ||
-             Inst.getFlag(MachineInstr::MIFlag::NoSWrap) ||
              Inst.getFlag(MachineInstr::MIFlag::NoUSWrap));
   }
 
@@ -1182,10 +1187,6 @@ std::optional<unsigned>
 SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
   // fadd => fsub
   switch (Opcode) {
-  case SystemZ::AR:
-    return SystemZ::SR;
-  case SystemZ::AGR:
-    return SystemZ::SGR;
   case SystemZ::WFADB:
     return SystemZ::WFSDB;
   case SystemZ::WFASB:
@@ -1197,10 +1198,6 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
   case SystemZ::VFASB:
     return SystemZ::VFSSB;
   // fsub => fadd
-  case SystemZ::SR:
-    return SystemZ::AR;
-  case SystemZ::SGR:
-    return SystemZ::AGR;
   case SystemZ::WFSDB:
     return SystemZ::WFADB;
   case SystemZ::WFSSB:
