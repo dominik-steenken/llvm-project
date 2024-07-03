@@ -480,9 +480,12 @@ def : InstRW<[WLat5LSU, WLat5LSU, FXU4, LSU, GroupAlone2],
 def : InstRW<[WLat2LSU, FXU, LSU, NormalGr], (instregex "RLL(G)?$")>;
 
 // Rotate and insert
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBH(G|H|L)$")>;
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBL(G|H|L)$")>;
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBG(N|32)?(Z)?$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBH(G|H|L)(Z)?$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "LH(H|L)R$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "LL(HH|CH)(L|H)R$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBL(G|H|L)(Z)?$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "LL(H|C)(L|F)(H)?R$")>;
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBMux$")>;
 
 // Rotate and Select

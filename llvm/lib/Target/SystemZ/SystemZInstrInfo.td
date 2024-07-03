@@ -1555,6 +1555,18 @@ let Predicates = [FeatureHighWord] in {
   def RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
   def RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
   def RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
+  // 128 on I4 sets the Z bit for the instruction
+  def RISBLGZ : RotateSelectRIEf<"risblgz", 0xEC51, GR32, GR64, 0, 128>;
+  def LLHFR   : FixedRotateSelectRIEf<"llhfr", 0xEC51, GRH32, GR64, 0, !or(128, 31), 32>;
+  def LLHLHR  : FixedRotateSelectRIEf<"llhlhr", 0xEC51, GR32, GR64, 16, !or(128, 31), 32>;
+  def LLCLHR  : FixedRotateSelectRIEf<"llclhr", 0xEC51, GR32, GR64, 24, !or(128, 31), 32>;
+  def RISBHGZ : RotateSelectRIEf<"risbhgz", 0xEC5D, GRH32, GR64, 0, 128>;
+  def LHHR    : FixedRotateSelectRIEf<"lhhr", 0xEC5D, GRH32, GR64, 0, !or(128, 31), 0>;
+  def LHLR    : FixedRotateSelectRIEf<"lhlr", 0xEC5D, GRH32, GR64, 0, !or(128, 31), 32>;
+  def LLHHHR  : FixedRotateSelectRIEf<"llhhhr", 0xEC5D, GRH32, GR64, 16, !or(128, 31), 0>;
+  def LLHHLR  : FixedRotateSelectRIEf<"llhhlr", 0xEC5D, GRH32, GR64, 16, !or(128, 31), 32>;
+  def LLCHHR  : FixedRotateSelectRIEf<"llchhr", 0xEC5D, GRH32, GR64, 24, !or(128, 31), 0>;
+  def LLCHLR  : FixedRotateSelectRIEf<"llchlr", 0xEC5D, GRH32, GR64, 24, !or(128, 31), 32>;
 }
 
 // Rotate second operand left and perform a logical operation with selected
