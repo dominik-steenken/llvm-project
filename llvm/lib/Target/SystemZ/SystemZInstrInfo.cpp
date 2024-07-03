@@ -1157,7 +1157,7 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
   case SystemZ::AR:
   case SystemZ::AGR:
-  case SystemZ::AGFR:
+  //case SystemZ::AGFR:
   case SystemZ::ARK:
   case SystemZ::AGRK:
     LLVM_DEBUG(
@@ -1168,7 +1168,7 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
              Inst.getFlag(MachineInstr::MIFlag::NoUSWrap));
   case SystemZ::ALR:
   case SystemZ::ALGR:
-  case SystemZ::ALGFR:
+  //case SystemZ::ALGFR:
   case SystemZ::ALRK:
   case SystemZ::ALGRK:
     LLVM_DEBUG(
