@@ -1157,26 +1157,13 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
   case SystemZ::AR:
   case SystemZ::AGR:
-  //case SystemZ::AGFR:
   case SystemZ::ARK:
   case SystemZ::AGRK:
-    LLVM_DEBUG(
-        dbgs() << "Flags: (NoUWrap="
-               << Inst.getFlag(MachineInstr::MIFlag::NoUWrap) << ", NoUSWrap="
-               << Inst.getFlag(MachineInstr::MIFlag::NoUSWrap) << ")\n";);
-    return !(Inst.getFlag(MachineInstr::MIFlag::NoSWrap) ||
-             Inst.getFlag(MachineInstr::MIFlag::NoUSWrap));
   case SystemZ::ALR:
   case SystemZ::ALGR:
-  //case SystemZ::ALGFR:
   case SystemZ::ALRK:
   case SystemZ::ALGRK:
-    LLVM_DEBUG(
-        dbgs() << "Flags: (NoUWrap="
-               << Inst.getFlag(MachineInstr::MIFlag::NoSWrap) << ", NoUSWrap="
-               << Inst.getFlag(MachineInstr::MIFlag::NoUSWrap) << ")\n";);
-    return !(Inst.getFlag(MachineInstr::MIFlag::NoUWrap) ||
-             Inst.getFlag(MachineInstr::MIFlag::NoUSWrap));
+    return true;
   }
 
   return false;
@@ -1207,6 +1194,40 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
     return SystemZ::VFADB;
   case SystemZ::VFSSB:
     return SystemZ::VFASB;
+  // add => sub
+  case SystemZ::AR:
+    return SystemZ::SR;
+  case SystemZ::AGR:
+    return SystemZ::SGR;
+  case SystemZ::ARK:
+    return SystemZ::SRK;
+  case SystemZ::AGRK:
+    return SystemZ::SGRK;
+  case SystemZ::ALR:
+    return SystemZ::SLR;
+  case SystemZ::ALGR:
+    return SystemZ::SLGR;
+  case SystemZ::ALRK:
+    return SystemZ::SLRK;
+  case SystemZ::ALGRK:
+    return SystemZ::SLGRK;
+  // sub => add
+  case SystemZ::SR:
+    return SystemZ::AR;
+  case SystemZ::SGR:
+    return SystemZ::AGR;
+  case SystemZ::SRK:
+    return SystemZ::ARK;
+  case SystemZ::SGRK:
+    return SystemZ::AGRK;
+  case SystemZ::SLR:
+    return SystemZ::ALR;
+  case SystemZ::SLGR:
+    return SystemZ::ALGR;
+  case SystemZ::SLRK:
+    return SystemZ::ALRK;
+  case SystemZ::SLGRK:
+    return SystemZ::ALGRK;
   default:
     return std::nullopt;
   }
