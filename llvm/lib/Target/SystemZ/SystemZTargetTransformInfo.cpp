@@ -1440,18 +1440,37 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
   case Intrinsic::cttz: {
     int ScalarSize = ParamTys.front()->getScalarSizeInBits();
     if (ScalarSize == 1)
+      // This loads a 1, then ands w/ complement of input to check if it is 0.
       return 2;
     if ((ScalarSize > 1) && (ScalarSize < 64))
+      // This subtracts 1 to turn trailing 0s into 1s, then uses 2 instructions
+      // to zero out the rest of the register, then does a popcount. This also
+      // works for non-power-of-2 scalar sizes.
       return 4;
     if (ScalarSize == 64)
+      // Same as above, but can skip one of the instructions for zeroing out
+      // the register.
       return 3;
-    break;
+    if (ScalarSize == 128)
+      // Here the code also subtracts 1 (vgbm, vaq), ands w/ complement to get
+      // rid of the prefix, runs vpopctg and then adds both resulting counts
+      // to get the final result (vgbm, vsumqg)
+      return 6;
+    // Other bit lengths above 64 are hard to predict, so we fall back to
+    // default.
+    return -1;
   }
   case Intrinsic::ctlz: {
     int ScalarSize = ParamTys.front()->getScalarSizeInBits();
     switch (ScalarSize) {
+    // For 64 bit, call flogr.
     case 64:
       return 1;
+    // For other bit lengths, load and extend data into 64-bit register,
+    // call flogr, and then subtract how many 0s were added in the extension.
+    // Then, convert the result to the right bit length and store. This
+    // process takes a varying amonut of instructions depending on how the
+    // various data type lengths line up.
     case 1:
     case 32:
       return 2;
@@ -1461,8 +1480,16 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
     case 2:
     case 4:
       return 5;
+    // For 128 bits, we can't call flogr. Here the strategy is to shift the
+    // bits to the right and or the resulting vector to the input vector, and
+    // to continue this until it is guaranteed that all bit positions to the
+    // right of the leading 1 are also 1s. The vector is then inverted,
+    // vpopctg is called, and the resulting counts summed and returned.
     case 128:
       return 16;
+    // Other bit lengths are hard to predict, so we fall back to default.
+    default:
+      return -1;
     }
     break;
   }
