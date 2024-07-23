@@ -1019,11 +1019,11 @@ let Defs = [CC], CCValues = 0xF, CCIfNoSignedWrap = 1 in {
 
   // Addition of memory.
   defm AH  : BinaryRXPair<"ah", 0x4A, 0xE37A, z_sadd, GR32, z_asextloadi16, 2>;
-  defm A   : BinaryRXPairAndPseudo<"a",  0x5A, 0xE35A, z_sadd, GR32, z_load, 4>;
+  defm A   : BinaryRXPairAndPseudo<"a",  0x5A, 0xE35A, z_sadd, GR32, null_frag, 4>;
   def  AGH : BinaryRXY<"agh", 0xE338, z_sadd, GR64, z_asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
   def  AGF : BinaryRXY<"agf", 0xE318, z_sadd, GR64, z_asextloadi32, 4>;
-  defm AG  : BinaryRXYAndPseudo<"ag",  0xE308, z_sadd, GR64, z_load, 8>;
+  defm AG  : BinaryRXYAndPseudo<"ag",  0xE308, z_sadd, GR64, null_frag, 8>;
 
   // Addition to memory.
   def ASI  : BinarySIY<"asi",  0xEB6A, add, imm32sx8>;
@@ -1061,9 +1061,9 @@ let Defs = [CC], CCValues = 0xF, IsLogical = 1 in {
               Requires<[FeatureHighWord]>;
 
   // Addition of memory.
-  defm AL   : BinaryRXPairAndPseudo<"al", 0x5E, 0xE35E, z_uadd, GR32, z_load, 4>;
+  defm AL   : BinaryRXPairAndPseudo<"al", 0x5E, 0xE35E, z_uadd, GR32, null_frag, 4>;
   def  ALGF : BinaryRXY<"algf", 0xE31A, z_uadd, GR64, z_azextloadi32, 4>;
-  defm ALG  : BinaryRXYAndPseudo<"alg",  0xE30A, z_uadd, GR64, z_load, 8>;
+  defm ALG  : BinaryRXYAndPseudo<"alg",  0xE30A, z_uadd, GR64, null_frag, 8>;
 
   // Addition to memory.
   def ALSI  : BinarySIY<"alsi",  0xEB6E, null_frag, imm32sx8>;
@@ -1107,11 +1107,11 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8,
 
   // Subtraction of memory.
   defm SH  : BinaryRXPair<"sh", 0x4B, 0xE37B, z_ssub, GR32, z_asextloadi16, 2>;
-  defm S   : BinaryRXPairAndPseudo<"s", 0x5B, 0xE35B, z_ssub, GR32, z_load, 4>;
+  defm S   : BinaryRXPairAndPseudo<"s", 0x5B, 0xE35B, z_ssub, GR32, null_frag, 4>;
   def  SGH : BinaryRXY<"sgh", 0xE339, z_ssub, GR64, z_asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
   def  SGF : BinaryRXY<"sgf", 0xE319, z_ssub, GR64, z_asextloadi32, 4>;
-  defm SG  : BinaryRXYAndPseudo<"sg",  0xE309, z_ssub, GR64, z_load, 8>;
+  defm SG  : BinaryRXYAndPseudo<"sg",  0xE309, z_ssub, GR64, null_frag, 8>;
 }
 defm : SXB<z_ssub, GR64, SGFR>;
 
@@ -1159,9 +1159,9 @@ let Defs = [CC], CCValues = 0x7, IsLogical = 1 in {
   def SLGFI : BinaryRIL<"slgfi", 0xC24, z_usub, GR64, imm64zx32>;
 
   // Subtraction of memory.
-  defm SL   : BinaryRXPairAndPseudo<"sl", 0x5F, 0xE35F, z_usub, GR32, z_load, 4>;
+  defm SL   : BinaryRXPairAndPseudo<"sl", 0x5F, 0xE35F, z_usub, GR32, null_frag, 4>;
   def  SLGF : BinaryRXY<"slgf", 0xE31B, z_usub, GR64, z_azextloadi32, 4>;
-  defm SLG  : BinaryRXYAndPseudo<"slg",  0xE30B, z_usub, GR64, z_load, 8>;
+  defm SLG  : BinaryRXYAndPseudo<"slg",  0xE30B, z_usub, GR64, null_frag, 8>;
 }
 defm : ZXB<z_usub, GR64, SLGFR>;
 
