@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZInstrInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZ.h"
 #include "SystemZInstrBuilder.h"
+#include "SystemZInstrInfo.h"
+#include "SystemZRegisterInfo.h"
 #include "SystemZSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -1612,6 +1613,34 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     if (RegMemOpcode) {
       LoadOpc = SystemZ::VL32;
       FPRC = &SystemZ::FP32BitRegClass;
+    } else {
+      RegMemOpcode = MI.getOpcode() == SystemZ::AR     ? SystemZ::A
+                     : MI.getOpcode() == SystemZ::ARK  ? SystemZ::A
+                     : MI.getOpcode() == SystemZ::ALR  ? SystemZ::AL
+                     : MI.getOpcode() == SystemZ::ALRK ? SystemZ::AL
+                     : MI.getOpcode() == SystemZ::SR   ? SystemZ::S
+                     : MI.getOpcode() == SystemZ::SRK  ? SystemZ::S
+                     : MI.getOpcode() == SystemZ::SLR  ? SystemZ::SL
+                     : MI.getOpcode() == SystemZ::SLRK ? SystemZ::SL
+                                                       : 0;
+      if (RegMemOpcode) {
+        LoadOpc = SystemZ::LMux;
+        FPRC = &SystemZ::GR32BitRegClass;
+      } else {
+        RegMemOpcode = MI.getOpcode() == SystemZ::AGR     ? SystemZ::AG
+                       : MI.getOpcode() == SystemZ::AGRK  ? SystemZ::AG
+                       : MI.getOpcode() == SystemZ::ALGR  ? SystemZ::ALG
+                       : MI.getOpcode() == SystemZ::ALGRK ? SystemZ::ALG
+                       : MI.getOpcode() == SystemZ::SGR   ? SystemZ::SG
+                       : MI.getOpcode() == SystemZ::SGRK  ? SystemZ::SG
+                       : MI.getOpcode() == SystemZ::SLGR  ? SystemZ::SLG
+                       : MI.getOpcode() == SystemZ::SLGRK ? SystemZ::SLG
+                                                          : 0;
+        if (RegMemOpcode) {
+          LoadOpc = SystemZ::LG;
+          FPRC = &SystemZ::GR64BitRegClass;
+        }
+      }
     }
   }
   if (!RegMemOpcode || LoadMI.getOpcode() != LoadOpc)
