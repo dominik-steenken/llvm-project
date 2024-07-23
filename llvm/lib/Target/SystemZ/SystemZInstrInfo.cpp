@@ -1163,6 +1163,23 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case SystemZ::ALGR:
   case SystemZ::ALRK:
   case SystemZ::ALGRK:
+    auto *MBB = Inst.getParent();
+    for (auto MII = std::next(Inst.getIterator()); MII != MBB->end(); ++MII) {
+      if (MII->definesRegister(SystemZ::CC, nullptr)) {
+        // CC is dead, allow reassociation
+        return true;
+      }
+      if (MII->readsRegister(SystemZ::CC, nullptr)) {
+        // CC is live, reject reassociation
+        return false;
+      }
+    }
+    for (auto MBI = MBB->succ_begin(); MBI != MBB->succ_end(); ++MBI) {
+      if ((*MBI)->isLiveIn(SystemZ::CC)) {
+        // CC is live in subsequent block, reject reassociation
+        return false;
+      }
+    }
     return true;
   }
 
