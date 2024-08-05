@@ -1698,31 +1698,25 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   if (Displacement < 0 || Displacement > 4095)
     RegMemOpcode = getLongDisplacementOpcode(RegMemOpcode);
 
-
   // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
-  if (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
+  // This test is only necessary for the floating point opcodes, hence the
+  // check for FPRC.
+  if (FPRC && (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC))) {
     assert(LoadMI.getParent() == MI.getParent() && "Assuming a local fold.");
     assert(LoadMI != InsertPt && "Assuming InsertPt not to be first in MBB.");
-    for (MachineBasicBlock::iterator MII = std::prev(InsertPt);;
-         --MII) {
+    for (MachineBasicBlock::iterator MII = std::prev(InsertPt);; --MII) {
       if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
         if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr)) {
-          LLVM_DEBUG(
-            dbgs() << "### Can't merge because CC is live here:\n";
-            MI.print(dbgs());
-            LoadMI.print(dbgs());
-          );
+          LLVM_DEBUG(dbgs() << "### Can't merge because CC is live here:\n";
+                     MI.print(dbgs()); LoadMI.print(dbgs()););
           return nullptr;
         }
         break;
       }
       if (MII == MBB->begin()) {
         if (MBB->isLiveIn(SystemZ::CC)) {
-          LLVM_DEBUG(
-            dbgs() << "### Can't merge because CC is live here:\n";
-            MI.print(dbgs());
-            LoadMI.print(dbgs());
-          );
+          LLVM_DEBUG(dbgs() << "### Can't merge because CC is live here:\n";
+                     MI.print(dbgs()); LoadMI.print(dbgs()););
           return nullptr;
         }
         break;
@@ -1760,8 +1754,6 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     return nullptr;
   }
 
-
-
   LLVM_DEBUG(
     dbgs() << "\n\n###Reg/Mem folding Peephole Optimizer triggered.\n";
     dbgs() << "Triggered on this instruction:\n";
@@ -1787,7 +1779,9 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
           .add(Base)
           .add(Disp)
           .add(Indx);
-  MIB->addRegisterDead(SystemZ::CC, &RI);
+  if (FPRC || MI.registerDefIsDead(SystemZ::CC, nullptr)) {
+    MIB->addRegisterDead(SystemZ::CC, &RI);
+  }
   // only modify register classes when necessary.
   if (FPRC) {
     MRI->setRegClass(DstReg, FPRC);
