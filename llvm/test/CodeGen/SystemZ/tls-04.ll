@@ -17,8 +17,8 @@ define ptr@foo() {
 ; CHECK-MAIN-DAG: larl %r12, _GLOBAL_OFFSET_TABLE_
 ; CHECK-MAIN-DAG: lgrl %r2, .LCP{{.*}}_0
 ; CHECK-MAIN: brasl %r14, __tls_get_offset@PLT:tls_ldcall:x
-; CHECK-MAIN: larl %r1, .LCP{{.*}}_1
-; CHECK-MAIN: ag %r2, 0(%r1)
+; CHECK-MAIN: lgrl %r0, .LCP{{.*}}_1
+; CHECK-MAIN: agr %r2, %r0
 ; CHECK-MAIN: ear [[HIGH:%r[0-5]]], %a0
 ; CHECK-MAIN: sllg [[TP:%r[0-5]]], [[HIGH]], 32
 ; CHECK-MAIN: ear [[TP]], %a1

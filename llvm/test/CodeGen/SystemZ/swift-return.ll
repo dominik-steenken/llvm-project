@@ -41,8 +41,8 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; CHECK: lr %r3, %r2
 ; CHECK-DAG: la %r2, 160(%r15)
 ; CHECK: brasl %r14, gen2
-; CHECK: l %r2, 160(%r15)
-; CHECK: a %r2, 164(%r15)
+; CHECK: l %r2, 164(%r15)
+; CHECK: a %r2, 160(%r15)
 ; CHECK: a %r2, 168(%r15)
 ; CHECK: a %r2, 172(%r15)
 ; CHECK: a %r2, 176(%r15)
