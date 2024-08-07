@@ -1608,102 +1608,166 @@ unsigned int getLongDisplacementOpcode(unsigned int OpcodeIn) {
     return SystemZ::SY;
   case SystemZ::SL:
     return SystemZ::SLY;
-  default:
+  case SystemZ::AG:
+  case SystemZ::ALG:
+  case SystemZ::SG:
+  case SystemZ::SLG:
     return OpcodeIn;
+  default:
+    llvm_unreachable("Can't find long displacement opcode.");
+    return -1;
   }
 }
 
+// Returns the corresponding Reg/Mem Opcode for the given
+// Reg/Reg or Reg/Reg/Reg Opcode.
+unsigned getRegMemOpcode(unsigned MIOpcode) {
+  switch (MIOpcode) {
+  case SystemZ::WFADB:
+    return SystemZ::ADB;
+  case SystemZ::WFSDB:
+    return SystemZ::SDB;
+  case SystemZ::WFMDB:
+    return SystemZ::MDB;
+  case SystemZ::WFASB:
+    return SystemZ::AEB;
+  case SystemZ::WFSSB:
+    return SystemZ::SEB;
+  case SystemZ::WFMSB:
+    return SystemZ::MEEB;
+  case SystemZ::AR:
+  case SystemZ::ARK:
+    return SystemZ::A;
+  case SystemZ::ALR:
+  case SystemZ::ALRK:
+    return SystemZ::AL;
+  case SystemZ::SR:
+  case SystemZ::SRK:
+    return SystemZ::S;
+  case SystemZ::SLR:
+  case SystemZ::SLRK:
+    return SystemZ::SL;
+  case SystemZ::AGR:
+  case SystemZ::AGRK:
+    return SystemZ::AG;
+  case SystemZ::ALGR:
+  case SystemZ::ALGRK:
+    return SystemZ::ALG;
+  case SystemZ::SGR:
+  case SystemZ::SGRK:
+    return SystemZ::SG;
+  case SystemZ::SLGR:
+  case SystemZ::SLGRK:
+    return SystemZ::SLG;
+  default:
+    return 0;
+  }
+}
+
+// In the context of Reg/Mem folding, check that the given
+// combination of arithmetic and load instruction is ok.
+bool matchLoadOpcode(unsigned MIOpcode, unsigned LoadOpcode) {
+  switch (MIOpcode) {
+  case SystemZ::WFADB:
+  case SystemZ::WFSDB:
+  case SystemZ::WFMDB:
+    return LoadOpcode == SystemZ::VL64;
+  case SystemZ::WFASB:
+  case SystemZ::WFSSB:
+  case SystemZ::WFMSB:
+    return LoadOpcode == SystemZ::VL32;
+  case SystemZ::AR:
+  case SystemZ::ARK:
+  case SystemZ::ALR:
+  case SystemZ::ALRK:
+  case SystemZ::SR:
+  case SystemZ::SRK:
+  case SystemZ::SLR:
+  case SystemZ::SLRK:
+    return (LoadOpcode == SystemZ::LMux) || (LoadOpcode == SystemZ::L) ||
+           (LoadOpcode == SystemZ::LY);
+  case SystemZ::AGR:
+  case SystemZ::AGRK:
+  case SystemZ::ALGR:
+  case SystemZ::ALGRK:
+  case SystemZ::SGR:
+  case SystemZ::SGRK:
+  case SystemZ::SLGR:
+  case SystemZ::SLGRK:
+    return (LoadOpcode == SystemZ::LG);
+  default:
+    return false;
+  }
+}
+
+// In the context of Reg/Mem folding, return the register class that
+// the target register needs to be converted to, if any.
+const TargetRegisterClass *getRegisterClass(unsigned MIOpcode) {
+  switch (MIOpcode) {
+  case SystemZ::WFADB:
+  case SystemZ::WFSDB:
+  case SystemZ::WFMDB:
+    return &SystemZ::FP64BitRegClass;
+  case SystemZ::WFASB:
+  case SystemZ::WFSSB:
+  case SystemZ::WFMSB:
+    return &SystemZ::FP32BitRegClass;
+  default:
+    return nullptr;
+  }
+}
+
+// For reassociable FP and Integer operations, any loads have been
+// purposefully left unfolded so that MachineCombiner can do its work
+// on reg/reg opcodes. After that, as many loads as possible are now folded.
+// TODO: This may be beneficial with other opcodes as well as machine-sink
+// can move loads close to their user in a different MBB, which the isel
+// matcher did not see.
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
     LiveIntervals *LIS) const {
-  MachineRegisterInfo *MRI = &MF.getRegInfo();
-  MachineBasicBlock *MBB = MI.getParent();
 
-  // For reassociable FP operations, any loads have been purposefully left
-  // unfolded so that MachineCombiner can do its work on reg/reg
-  // opcodes. After that, as many loads as possible are now folded.
-  // TODO: This may be beneficial with other opcodes as well as machine-sink
-  // can move loads close to their user in a different MBB, which the isel
-  // matcher did not see.
-  bool LoadOpcMatches = false;
-  unsigned RegMemOpcode = 0;
-  const TargetRegisterClass *FPRC = nullptr;
-  RegMemOpcode = MI.getOpcode() == SystemZ::WFADB   ? SystemZ::ADB
-                 : MI.getOpcode() == SystemZ::WFSDB ? SystemZ::SDB
-                 : MI.getOpcode() == SystemZ::WFMDB ? SystemZ::MDB
-                                                    : 0;
-  if (RegMemOpcode) {
-    LoadOpcMatches = LoadMI.getOpcode() == SystemZ::VL64;
-    FPRC = &SystemZ::FP64BitRegClass;
-  } else {
-    RegMemOpcode = MI.getOpcode() == SystemZ::WFASB   ? SystemZ::AEB
-                   : MI.getOpcode() == SystemZ::WFSSB ? SystemZ::SEB
-                   : MI.getOpcode() == SystemZ::WFMSB ? SystemZ::MEEB
-                                                      : 0;
-    if (RegMemOpcode) {
-      LoadOpcMatches = LoadMI.getOpcode() == SystemZ::VL32;
-      FPRC = &SystemZ::FP32BitRegClass;
-    } else {
-      RegMemOpcode = MI.getOpcode() == SystemZ::AR     ? SystemZ::A
-                     : MI.getOpcode() == SystemZ::ARK  ? SystemZ::A
-                     : MI.getOpcode() == SystemZ::ALR  ? SystemZ::AL
-                     : MI.getOpcode() == SystemZ::ALRK ? SystemZ::AL
-                     : MI.getOpcode() == SystemZ::SR   ? SystemZ::S
-                     : MI.getOpcode() == SystemZ::SRK  ? SystemZ::S
-                     : MI.getOpcode() == SystemZ::SLR  ? SystemZ::SL
-                     : MI.getOpcode() == SystemZ::SLRK ? SystemZ::SL
-                                                       : 0;
-      if (RegMemOpcode) {
-        LoadOpcMatches = (LoadMI.getOpcode() == SystemZ::LMux) || (LoadMI.getOpcode() == SystemZ::L) || (LoadMI.getOpcode() == SystemZ::LY);
-      } else {
-        RegMemOpcode = MI.getOpcode() == SystemZ::AGR     ? SystemZ::AG
-                       : MI.getOpcode() == SystemZ::AGRK  ? SystemZ::AG
-                       : MI.getOpcode() == SystemZ::ALGR  ? SystemZ::ALG
-                       : MI.getOpcode() == SystemZ::ALGRK ? SystemZ::ALG
-                       : MI.getOpcode() == SystemZ::SGR   ? SystemZ::SG
-                       : MI.getOpcode() == SystemZ::SGRK  ? SystemZ::SG
-                       : MI.getOpcode() == SystemZ::SLGR  ? SystemZ::SLG
-                       : MI.getOpcode() == SystemZ::SLGRK ? SystemZ::SLG
-                                                          : 0;
-        if (RegMemOpcode) {
-          LoadOpcMatches = LoadMI.getOpcode() == SystemZ::LG;
-        }
-      }
-    }
-  }
+  // ## Gather Context Info and ensure proper match
+
+  // Derived Info (Target Opcodes, Transformation Info)
+  unsigned RegMemOpcode = getRegMemOpcode(MI.getOpcode());
+  bool LoadOpcMatches = matchLoadOpcode(MI.getOpcode(), LoadMI.getOpcode());
+  const TargetRegisterClass *FPRC = getRegisterClass(MI.getOpcode());
+  bool CCDefIsDead = MI.registerDefIsDead(SystemZ::CC, nullptr);
+
+  // If the instr itself or the load don't match expectations, bail out.
   if (!RegMemOpcode || !LoadOpcMatches) {
-    LLVM_DEBUG(
-      dbgs() << "### Opcodes did not match:\n";
-      MI.print(dbgs());
-      LoadMI.print(dbgs());
-    );
     return nullptr;
   }
 
-    // Get operand 0, assumed to be a register
+  // Operand Info (Operands of MI and LoadMI)
   Register DstReg = MI.getOperand(0).getReg();
-  // Get operands 1 and 2
   MachineOperand LHS = MI.getOperand(1);
   MachineOperand RHS = MI.getOperand(2);
   MachineOperand &Base = LoadMI.getOperand(1);
   MachineOperand &Disp = LoadMI.getOperand(2);
   MachineOperand &Indx = LoadMI.getOperand(3);
 
+  // ## Perform Sanity Checks
 
-  // Make sure the new instruction has enough space for the
-  // memory displacement of the load instruction. This ensures that, e.g.
-  // LY, ARK => AY rather than LY, ARK => A
-  int Displacement = Disp.getImm();
-  if (Displacement < 0 || Displacement > 4095)
-    RegMemOpcode = getLongDisplacementOpcode(RegMemOpcode);
+  // If MI has a non-dead def of CC, but the Reg/Mem instruction does
+  // not define CC, bail to preserve the CC.
+  if (MI.definesRegister(SystemZ::CC, nullptr) && CCDefIsDead &&
+      !get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
+    return nullptr;
+  }
 
-  // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
-  // This test is only necessary for the floating point opcodes, hence the
-  // check for FPRC.
-  if (FPRC && (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC))) {
+  // If this optimization replaces an MI without a def of CC with one that
+  // clobbers CC, we need to make sure CC is not live at this point.
+  // If it is live, bail out. Otherwise, note that the CC def will
+  // be dead and continue,
+  if (!MI.definesRegister(SystemZ::CC, nullptr) &&
+      (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC))) {
     assert(LoadMI.getParent() == MI.getParent() && "Assuming a local fold.");
     assert(LoadMI != InsertPt && "Assuming InsertPt not to be first in MBB.");
+    MachineBasicBlock *MBB = MI.getParent();
+    // search for a non-dead def of CC prior to this point in the MBB
     for (MachineBasicBlock::iterator MII = std::prev(InsertPt);; --MII) {
       if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
         if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr)) {
@@ -1713,6 +1777,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
         }
         break;
       }
+      // If no such def was found when we reach the beginning of the MBB,
+      // check if CC is live going in.
       if (MII == MBB->begin()) {
         if (MBB->isLiveIn(SystemZ::CC)) {
           LLVM_DEBUG(dbgs() << "### Can't merge because CC is live here:\n";
@@ -1722,6 +1788,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
         break;
       }
     }
+    CCDefIsDead = true;
   }
 
   // get the register that stores the result of the load
@@ -1729,16 +1796,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   // if that register is not the register indicated in Ops, or if Ops indicates
   // more than one register, bail out.
   if (Ops.size() != 1 || FoldAsLoadDefReg != MI.getOperand(Ops[0]).getReg()) {
-    LLVM_DEBUG(
-      dbgs() << "### Ops indicated did not match :\n";
-      MI.print(dbgs());
-      LoadMI.print(dbgs());
-      dbgs() << "\n" << Ops.size() << "\n";
-    );
     return nullptr;
   }
-
-  MachineOperand &RegMO = RHS.getReg() == FoldAsLoadDefReg ? LHS : RHS;
 
   // For subtractions, we need to make sure that the register to be replaced
   // with a memory location is the RHS, as otherwise there will be an invalid
@@ -1746,13 +1805,15 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   // That same issue does not exist for the additions or multiplications,
   // where that commutation is fine.
   if (isRegMemSubtract(RegMemOpcode) && FoldAsLoadDefReg != RHS.getReg()) {
-    LLVM_DEBUG(
-      dbgs() << "### Can't merge because would have to commutate subtract:\n";
-      MI.print(dbgs());
-      LoadMI.print(dbgs());
-    );
     return nullptr;
   }
+
+  // Make sure the new instruction has enough space for the
+  // memory displacement of the load instruction. This ensures that, e.g.
+  // LY, ARK => AY rather than LY, ARK => A
+  int Displacement = Disp.getImm();
+  if (Displacement < 0 || Displacement > 4095)
+    RegMemOpcode = getLongDisplacementOpcode(RegMemOpcode);
 
   LLVM_DEBUG(
     dbgs() << "\n\n###Reg/Mem folding Peephole Optimizer triggered.\n";
@@ -1772,31 +1833,38 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     Indx.print(dbgs());
   );
 
+  // ## Construct new Reg/Mem Machine Instruction
 
+  // Build the instruction itself.
+  MachineOperand &RegMO = RHS.getReg() == FoldAsLoadDefReg ? LHS : RHS;
   MachineInstrBuilder MIB =
       BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(RegMemOpcode), DstReg)
           .add(RegMO)
           .add(Base)
           .add(Disp)
           .add(Indx);
-  if (FPRC || MI.registerDefIsDead(SystemZ::CC, nullptr)) {
+
+  // If the Reg/Mem instruction defines CC, and the original def of
+  // CC was dead, replicate that.
+  if (CCDefIsDead && MIB->definesRegister(SystemZ::CC, nullptr)) {
     MIB->addRegisterDead(SystemZ::CC, &RI);
   }
-  // only modify register classes when necessary.
+
+  // Modify register classes if necessary.
   if (FPRC) {
+    MachineRegisterInfo *MRI = &MF.getRegInfo();
     MRI->setRegClass(DstReg, FPRC);
     MRI->setRegClass(RegMO.getReg(), FPRC);
   }
+
+  // Transfer relevant flags from MI to the new Reg/Mem instruction.
   transferMIFlag(&MI, MIB, MachineInstr::NoFPExcept);
   transferMIFlag(&MI, MIB, MachineInstr::NoSWrap);
   transferMIFlag(&MI, MIB, MachineInstr::NoUWrap);
   transferMIFlag(&MI, MIB, MachineInstr::NoUSWrap);
 
-  LLVM_DEBUG(
-    dbgs() << "Resulting MI:\n";
-    MIB->print(dbgs());
-    dbgs() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "\nResulting MI:\n"; MIB->print(dbgs());
+             dbgs() << "\n";);
 
   return MIB;
 }
