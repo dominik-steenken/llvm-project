@@ -640,6 +640,8 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
   assert(UseOpIdx != -1 && "Expected FoldAsLoadDefReg to be used by MI.");
 
   // Check whether we can fold the load.
+  LLVM_DEBUG(dbgs() << "MI " << MI.getOpcode() << ", LoadMI "
+                    << DefMI->getOpcode() << "\n";);
   if (MachineInstr *FoldMI =
           foldMemoryOperand(MI, {((unsigned)UseOpIdx)}, *DefMI)) {
     FoldAsLoadDefReg = 0;
