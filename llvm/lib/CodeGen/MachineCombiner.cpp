@@ -488,6 +488,16 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
                          SparseSet<LiveRegUnit> &RegUnits,
                          const TargetInstrInfo *TII, unsigned Pattern,
                          bool IncrementalUpdate) {
+
+  LLVM_DEBUG(dbgs() << "MachineCombiner inserts [ ";
+             for (auto *insn
+                  : InsInstrs) dbgs()
+             << insn->getOpcode() << " ";
+             dbgs() << "] and removes [ "; for (auto *insn
+                                                : DelInstrs) dbgs()
+                                           << insn->getOpcode() << " ";
+             dbgs() << "]\n";);
+
   // If we want to fix up some placeholder for some target, do it now.
   // We need this because in genAlternativeCodeSequence, we have not decided the
   // better pattern InsInstrs or DelInstrs, so we don't want generate some

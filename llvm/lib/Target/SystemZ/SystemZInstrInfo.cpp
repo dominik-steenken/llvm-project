@@ -1141,8 +1141,8 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
     Opc = *InverseOpcode;
   }
 
-  LLVM_DEBUG(dbgs() << "SystemZInstrInfo::isAssociativeAndCommutative(Inst("
-                    << Opc << "), Invert=" << Invert << ")";);
+  LLVM_DEBUG(dbgs() << "### SystemZInstrInfo::isAssociativeAndCommutative(Inst("
+                    << Opc << "), Invert=" << Invert << ")\n";);
 
   switch (Opc) {
   default:
@@ -1172,6 +1172,7 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
     for (auto MII = std::next(Inst.getIterator()); MII != MBB->end(); ++MII) {
       if (MII->definesRegister(SystemZ::CC, nullptr)) {
         // CC is dead, allow reassociation
+        LLVM_DEBUG(dbgs() << "### allow reassociation:" << Opc << "\n";);
         return true;
       }
       if (MII->readsRegister(SystemZ::CC, nullptr)) {
