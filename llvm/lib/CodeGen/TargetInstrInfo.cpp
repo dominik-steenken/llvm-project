@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "../Target/SystemZ/SystemZ.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -931,9 +932,15 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
     // reassociation of operands to increase ILP. Specify each commutation
     // possibility for the Prev instruction in the sequence and let the
     // machine combiner decide if changing the operands is worthwhile.
-    LLVM_DEBUG(dbgs() << "### Reassociation Candidate: " << Root.getOpcode()
-                      << "\n### ";
-               Root.print(dbgs()););
+    LLVM_DEBUG(Register TargetReg = Root.getOperand(0).getReg();
+               MachineRegisterInfo &MRI =
+                   Root.getParent()->getParent()->getRegInfo();
+               if ((MRI.getRegClass(TargetReg) == SystemZ::GR64BitRegClass) ||
+                   (MRI.getRegClass(TargetReg) == SystemZ::GR32BitRegClass) ||
+                   (MRI.getRegClass(TargetReg) == SystemZ::ADDR64BitRegClass)) {
+                 dbgs() << "### Reassociation Candidate: " << Root.getOpcode()
+                        << "\n### ";
+               } Root.print(dbgs()););
     if (Commute) {
       Patterns.push_back(MachineCombinerPattern::REASSOC_AX_YB);
       Patterns.push_back(MachineCombinerPattern::REASSOC_XA_YB);

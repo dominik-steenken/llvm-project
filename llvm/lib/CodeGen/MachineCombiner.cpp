@@ -10,6 +10,7 @@
 // instructions do not lengthen the critical path or the resource depth.
 //===----------------------------------------------------------------------===//
 
+#include "../Target/SystemZ/SystemZ.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -489,14 +490,20 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
                          const TargetInstrInfo *TII, unsigned Pattern,
                          bool IncrementalUpdate) {
 
-  LLVM_DEBUG(dbgs() << "MachineCombiner inserts [ ";
-             for (auto *insn
-                  : InsInstrs) dbgs()
-             << insn->getOpcode() << " ";
-             dbgs() << "] and removes [ "; for (auto *insn
-                                                : DelInstrs) dbgs()
-                                           << insn->getOpcode() << " ";
-             dbgs() << "]\n";);
+  LLVM_DEBUG(Register TargetReg = InsInstrs.front()->getOperand(0).getReg();
+             MachineRegisterInfo &MRI =
+                 MI.getParent().getParent()->getRegInfo();
+             if ((MRI.getRegClass(TargetReg) == SystemZ::GR64BitRegClass) ||
+                 (MRI.getRegClass(TargetReg) == SystemZ::GR32BitRegClass) ||
+                 (MRI.getRegClass(TargetReg) == SystemZ::ADDR64BitRegClass)) {
+               dbgs() << "MachineCombiner inserts [ ";
+               for (auto *insn : InsInstrs)
+                 dbgs() << insn->getOpcode() << " ";
+               dbgs() << "] and removes [ ";
+               for (auto *insn : DelInstrs)
+                 dbgs() << insn->getOpcode() << " ";
+               dbgs() << "]\n";
+             });
 
   // If we want to fix up some placeholder for some target, do it now.
   // We need this because in genAlternativeCodeSequence, we have not decided the
