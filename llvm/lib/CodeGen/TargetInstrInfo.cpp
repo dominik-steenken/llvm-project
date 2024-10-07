@@ -935,9 +935,14 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
     LLVM_DEBUG(Register TargetReg = Root.getOperand(0).getReg();
                MachineRegisterInfo &MRI =
                    Root.getParent()->getParent()->getRegInfo();
-               if ((MRI.getRegClass(TargetReg) == SystemZ::GR64BitRegClass) ||
-                   (MRI.getRegClass(TargetReg) == SystemZ::GR32BitRegClass) ||
-                   (MRI.getRegClass(TargetReg) == SystemZ::ADDR64BitRegClass)) {
+               if ((MRI.getRegClass(TargetReg) ==
+                    MRI.getTargetRegisterInfo()->getRegClass(
+                        4)) || // SystemZ::GR32BitRegClass
+                   (MRI.getRegClass(TargetReg) ==
+                    MRI.getTargetRegisterInfo()->getRegClass(
+                        15)) || // SystemZ::GR64BitRegClass
+                   (MRI.getRegClass(TargetReg) ==
+                    MRI.getTargetRegisterInfo()->getRegClass(16))) {
                  dbgs() << "### Reassociation Candidate: " << Root.getOpcode()
                         << "\n### ";
                } Root.print(dbgs()););

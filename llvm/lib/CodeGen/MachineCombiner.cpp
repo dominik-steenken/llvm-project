@@ -10,7 +10,6 @@
 // instructions do not lengthen the critical path or the resource depth.
 //===----------------------------------------------------------------------===//
 
-#include "../Target/SystemZ/SystemZ.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -468,6 +467,10 @@ bool MachineCombiner::preservesResourceLen(
          ResLenBeforeCombine + TII->getExtendResourceLenLimit();
 }
 
+bool isTargetOpcode(unsigned Opcode) {
+  switch (Opcode) {}
+}
+
 /// Inserts InsInstrs and deletes DelInstrs. Incrementally updates instruction
 /// depths if requested.
 ///
@@ -493,9 +496,15 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
   LLVM_DEBUG(Register TargetReg = InsInstrs.front()->getOperand(0).getReg();
              MachineRegisterInfo &MRI =
                  MI.getParent().getParent()->getRegInfo();
-             if ((MRI.getRegClass(TargetReg) == SystemZ::GR64BitRegClass) ||
-                 (MRI.getRegClass(TargetReg) == SystemZ::GR32BitRegClass) ||
-                 (MRI.getRegClass(TargetReg) == SystemZ::ADDR64BitRegClass)) {
+             if ((MRI.getRegClass(TargetReg) ==
+                  MRI.getTargetRegisterInfo()->getRegClass(
+                      4)) || // SystemZ::GR32BitRegClass
+                 (MRI.getRegClass(TargetReg) ==
+                  MRI.getTargetRegisterInfo()->getRegClass(
+                      15)) || // SystemZ::GR64BitRegClass
+                 (MRI.getRegClass(TargetReg) ==
+                  MRI.getTargetRegisterInfo()->getRegClass(
+                      16))) { // SystemZ::ADDR64BitRegClass
                dbgs() << "MachineCombiner inserts [ ";
                for (auto *insn : InsInstrs)
                  dbgs() << insn->getOpcode() << " ";
