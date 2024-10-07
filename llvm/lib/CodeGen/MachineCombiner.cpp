@@ -495,7 +495,7 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
 
   LLVM_DEBUG(Register TargetReg = InsInstrs.front()->getOperand(0).getReg();
              MachineRegisterInfo &MRI =
-                 MI.getParent().getParent()->getRegInfo();
+                 MI.getParent()->getParent()->getRegInfo();
              if ((MRI.getRegClass(TargetReg) ==
                   MRI.getTargetRegisterInfo()->getRegClass(
                       4)) || // SystemZ::GR32BitRegClass
