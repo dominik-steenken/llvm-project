@@ -467,10 +467,6 @@ bool MachineCombiner::preservesResourceLen(
          ResLenBeforeCombine + TII->getExtendResourceLenLimit();
 }
 
-bool isTargetOpcode(unsigned Opcode) {
-  switch (Opcode) {}
-}
-
 /// Inserts InsInstrs and deletes DelInstrs. Incrementally updates instruction
 /// depths if requested.
 ///
