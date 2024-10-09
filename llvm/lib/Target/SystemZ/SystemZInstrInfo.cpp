@@ -1642,30 +1642,30 @@ unsigned getRegMemOpcode(unsigned MIOpcode) {
     return SystemZ::SEB;
   case SystemZ::WFMSB:
     return SystemZ::MEEB;
-  case SystemZ::AR:
-  case SystemZ::ARK:
-    return SystemZ::A;
-  case SystemZ::ALR:
-  case SystemZ::ALRK:
-    return SystemZ::AL;
-  case SystemZ::SR:
-  case SystemZ::SRK:
-    return SystemZ::S;
-  case SystemZ::SLR:
-  case SystemZ::SLRK:
-    return SystemZ::SL;
-  case SystemZ::AGR:
-  case SystemZ::AGRK:
-    return SystemZ::AG;
-  case SystemZ::ALGR:
-  case SystemZ::ALGRK:
-    return SystemZ::ALG;
-  case SystemZ::SGR:
-  case SystemZ::SGRK:
-    return SystemZ::SG;
-  case SystemZ::SLGR:
-  case SystemZ::SLGRK:
-    return SystemZ::SLG;
+  // case SystemZ::AR:
+  // case SystemZ::ARK:
+  //   return SystemZ::A;
+  // case SystemZ::ALR:
+  // case SystemZ::ALRK:
+  //   return SystemZ::AL;
+  // case SystemZ::SR:
+  // case SystemZ::SRK:
+  //   return SystemZ::S;
+  // case SystemZ::SLR:
+  // case SystemZ::SLRK:
+  //   return SystemZ::SL;
+  // case SystemZ::AGR:
+  // case SystemZ::AGRK:
+  //   return SystemZ::AG;
+  // case SystemZ::ALGR:
+  // case SystemZ::ALGRK:
+  //   return SystemZ::ALG;
+  // case SystemZ::SGR:
+  // case SystemZ::SGRK:
+  //   return SystemZ::SG;
+  // case SystemZ::SLGR:
+  // case SystemZ::SLGRK:
+  //   return SystemZ::SLG;
   default:
     return 0;
   }
