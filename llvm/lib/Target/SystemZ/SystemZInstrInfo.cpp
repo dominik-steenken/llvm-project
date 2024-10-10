@@ -1245,6 +1245,16 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
     return SystemZ::SLRK;
   case SystemZ::ALGRK:
     return SystemZ::SLGRK;
+  case SystemZ::VAB:
+    return SystemZ::VSB;
+  case SystemZ::VAH:
+    return SystemZ::VSH;
+  case SystemZ::VAF:
+    return SystemZ::VSF;
+  case SystemZ::VAG:
+    return SystemZ::VSG;
+  case SystemZ::VAQ:
+    return SystemZ::VSQ;
   // sub => add
   case SystemZ::SR:
     return SystemZ::AR;
@@ -1262,6 +1272,16 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
     return SystemZ::ALRK;
   case SystemZ::SLGRK:
     return SystemZ::ALGRK;
+  case SystemZ::VSB:
+    return SystemZ::VAB;
+  case SystemZ::VSH:
+    return SystemZ::VAH;
+  case SystemZ::VSF:
+    return SystemZ::VAF;
+  case SystemZ::VSG:
+    return SystemZ::VAG;
+  case SystemZ::VSQ:
+    return SystemZ::VAQ;
   default:
     return std::nullopt;
   }
