@@ -1419,16 +1419,16 @@ def MSGFI : BinaryRIL<"msgfi", 0xC20, mul, GR64, imm64sx32>;
 
 // Multiplication of memory.
 defm MH   : BinaryRXPair<"mh", 0x4C, 0xE37C, mul, GR32, z_asextloadi16, 2>;
-defm MS   : BinaryRXPair<"ms", 0x71, 0xE351, mul, GR32, z_load, 4>;
+defm MS   : BinaryRXPair<"ms", 0x71, 0xE351, mul, GR32, null_frag, 4>;
 def  MGH  : BinaryRXY<"mgh", 0xE33C, mul, GR64, z_asextloadi16, 2>,
             Requires<[FeatureMiscellaneousExtensions2]>;
 def  MSGF : BinaryRXY<"msgf", 0xE31C, mul, GR64, z_asextloadi32, 4>;
-def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, z_load, 8>;
+def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, null_frag, 8>;
 
 // Multiplication of memory, setting the condition code.
 let Predicates = [FeatureMiscellaneousExtensions2], Defs = [CC] in {
-  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, z_load, 4>;
-  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, z_load, 8>;
+  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, null_frag, 4>;
+  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, null_frag, 8>;
 }
 
 // Multiplication of a register, producing two results.
