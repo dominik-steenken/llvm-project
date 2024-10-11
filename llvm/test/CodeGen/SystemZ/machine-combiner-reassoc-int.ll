@@ -4,8 +4,8 @@
 
 ; Test reassociation of fp add, subtract and multiply.
 
-define i64 @fun0_fadd(ptr %x) {
-; CHECK-LABEL: fun0_fadd:
+define i64 @fun0_add(ptr %x) {
+; CHECK-LABEL: fun0_add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld %f0, 0(%r2)
 ; CHECK-NEXT:    adb %f0, 8(%r2)
@@ -44,8 +44,8 @@ entry:
   ret i64 %add13
 }
 
-define i32 @fun1_fadd(ptr %x) {
-; CHECK-LABEL: fun1_fadd:
+define i32 @fun1_add(ptr %x) {
+; CHECK-LABEL: fun1_add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lde %f0, 0(%r2)
 ; CHECK-NEXT:    aeb %f0, 4(%r2)
@@ -84,8 +84,8 @@ entry:
   ret i32 %add13
 }
 
-define i128 @fun2_fadd(ptr %x) {
-; CHECK-LABEL: fun2_fadd:
+define i128 @fun2_add(ptr %x) {
+; CHECK-LABEL: fun2_add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 16(%r3), 3
@@ -130,8 +130,8 @@ entry:
   ret i128 %add13
 }
 
-define <2 x i64> @fun3_fadd(ptr %x) {
-; CHECK-LABEL: fun3_fadd:
+define <2 x i64> @fun3_add(ptr %x) {
+; CHECK-LABEL: fun3_add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
@@ -175,8 +175,8 @@ entry:
   ret <2 x i64> %add13
 }
 
-define <4 x i32> @fun4_fadd(ptr %x) {
-; CHECK-LABEL: fun4_fadd:
+define <4 x i32> @fun4_add(ptr %x) {
+; CHECK-LABEL: fun4_add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
@@ -220,8 +220,8 @@ entry:
   ret <4 x i32> %add13
 }
 
-define i64 @fun5_fsub(ptr %x) {
-; CHECK-LABEL: fun5_fsub:
+define i64 @fun5_sub(ptr %x) {
+; CHECK-LABEL: fun5_sub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld %f0, 0(%r2)
 ; CHECK-NEXT:    sdb %f0, 8(%r2)
@@ -260,8 +260,8 @@ entry:
   ret i64 %sub13
 }
 
-define i32 @fun6_fsub(ptr %x) {
-; CHECK-LABEL: fun6_fsub:
+define i32 @fun6_sub(ptr %x) {
+; CHECK-LABEL: fun6_sub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lde %f0, 0(%r2)
 ; CHECK-NEXT:    seb %f0, 4(%r2)
@@ -300,8 +300,8 @@ entry:
   ret i32 %sub13
 }
 
-define i128 @fun7_fsub(ptr %x) {
-; CHECK-LABEL: fun7_fsub:
+define i128 @fun7_sub(ptr %x) {
+; CHECK-LABEL: fun7_sub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 16(%r3), 3
@@ -346,8 +346,8 @@ entry:
   ret i128 %sub13
 }
 
-define <2 x i64> @fun8_fsub(ptr %x) {
-; CHECK-LABEL: fun8_fsub:
+define <2 x i64> @fun8_sub(ptr %x) {
+; CHECK-LABEL: fun8_sub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
@@ -391,8 +391,8 @@ entry:
   ret <2 x i64> %sub13
 }
 
-define <4 x i32> @fun9_fsub(ptr %x) {
-; CHECK-LABEL: fun9_fsub:
+define <4 x i32> @fun9_sub(ptr %x) {
+; CHECK-LABEL: fun9_sub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
@@ -436,8 +436,8 @@ entry:
   ret <4 x i32> %sub13
 }
 
-define i64 @fun10_fmul(ptr %x) {
-; CHECK-LABEL: fun10_fmul:
+define i64 @fun10_mul(ptr %x) {
+; CHECK-LABEL: fun10_mul:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld %f0, 8(%r2)
 ; CHECK-NEXT:    mdb %f0, 0(%r2)
@@ -476,8 +476,8 @@ entry:
   ret i64 %mul13
 }
 
-define i32 @fun11_fmul(ptr %x) {
-; CHECK-LABEL: fun11_fmul:
+define i32 @fun11_mul(ptr %x) {
+; CHECK-LABEL: fun11_mul:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lde %f0, 4(%r2)
 ; CHECK-NEXT:    meeb %f0, 0(%r2)
@@ -516,8 +516,8 @@ entry:
   ret i32 %mul13
 }
 
-define i128 @fun12_fmul(ptr %x) {
-; CHECK-LABEL: fun12_fmul:
+define i128 @fun12_mul(ptr %x) {
+; CHECK-LABEL: fun12_mul:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 16(%r3), 3
@@ -562,8 +562,8 @@ entry:
   ret i128 %mul13
 }
 
-define <2 x i64> @fun13_fmul(ptr %x) {
-; CHECK-LABEL: fun13_fmul:
+define <2 x i64> @fun13_mul(ptr %x) {
+; CHECK-LABEL: fun13_mul:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
@@ -607,8 +607,8 @@ entry:
   ret <2 x i64> %mul13
 }
 
-define <4 x i32> @fun14_fmul(ptr %x) {
-; CHECK-LABEL: fun14_fmul:
+define <4 x i32> @fun14_mul(ptr %x) {
+; CHECK-LABEL: fun14_mul:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
@@ -650,4 +650,28 @@ entry:
   %7 = load <4 x i32>, ptr %arrayidx12, align 8
   %mul13 = mul <4 x i32> %mul11, %7
   ret <4 x i32> %mul13
+}
+
+define i64 @fun15_divdelay(ptr %x) {
+entry:
+  %0 = load i64, ptr %x, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %x, i64 2
+  %1 = load i64, ptr %arrayidx1, align 8
+  %div = div i64 %1, %0
+  %arrayidx2 = getelementptr inbounds i64, ptr %x, i64 4
+  %2 = load i64, ptr %arrayidx2, align 8
+  %add = add i64 %div, %2
+  ret i64 %add
+}
+
+define i64 @fun16_divdelay(ptr %x) {
+entry:
+  %0 = load i64, ptr %x, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %x, i64 2
+  %1 = load i64, ptr %arrayidx1, align 8
+  %add = add i64 %1, %0
+  %arrayidx2 = getelementptr inbounds i64, ptr %x, i64 4
+  %2 = load i64, ptr %arrayidx2, align 8
+  %div = div i64 %add, %2
+  ret i64 %div
 }
