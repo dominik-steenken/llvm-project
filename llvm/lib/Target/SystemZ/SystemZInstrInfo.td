@@ -1448,8 +1448,8 @@ def M   : BinaryRX <"m",   0x5C,   null_frag, GR128, z_load, 4>;
 def MFY : BinaryRXY<"mfy", 0xE35C, null_frag, GR128, z_load, 4>;
 def MG  : BinaryRXY<"mg",  0xE384, null_frag, GR128, z_load, 8>,
           Requires<[FeatureMiscellaneousExtensions2]>;
-def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, z_load, 4>;
-def MLG : BinaryRXY<"mlg", 0xE386, null_frag, GR128, z_load, 8>;
+def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, null_frag, 4>;
+def MLG : BinaryRXY<"mlg", 0xE386, null_frag, GR128, null_frag, 8>;
 
 def : Pat<(z_smul_lohi GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
           (MG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
