@@ -1174,11 +1174,19 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case SystemZ::MSRKC:
   case SystemZ::MSGR:
   case SystemZ::MSGRKC:
+  case SystemZ::MLR:
+  case SystemZ::MLGR:
   case SystemZ::VAB:
   case SystemZ::VAH:
   case SystemZ::VAF:
   case SystemZ::VAG:
   case SystemZ::VAQ:
+  case SystemZ::VMLB:
+  case SystemZ::VMHB:
+  case SystemZ::VMLH:
+  case SystemZ::VMHH:
+  case SystemZ::VMLF:
+  case SystemZ::VMHF:
     auto *MBB = Inst.getParent();
     for (auto MII = std::next(Inst.getIterator()); MII != MBB->end(); ++MII) {
       if (MII->definesRegister(SystemZ::CC, nullptr)) {
