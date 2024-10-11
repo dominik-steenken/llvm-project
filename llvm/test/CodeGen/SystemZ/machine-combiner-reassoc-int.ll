@@ -660,8 +660,11 @@ entry:
   %div = div i64 %1, %0
   %arrayidx2 = getelementptr inbounds i64, ptr %x, i64 4
   %2 = load i64, ptr %arrayidx2, align 8
-  %add = add i64 %div, %2
-  ret i64 %add
+  %add1 = add i64 %div, %2
+  %arrayidx3 = getelementptr inbounds i64, ptr %x, i64 6
+  %3 = load i64, ptr %arrayidx3, align 8
+  %add2 = add i64 %add1, %3
+  ret i64 %add2
 }
 
 define i64 @fun16_divdelay(ptr %x) {
@@ -669,9 +672,12 @@ entry:
   %0 = load i64, ptr %x, align 8
   %arrayidx1 = getelementptr inbounds i64, ptr %x, i64 2
   %1 = load i64, ptr %arrayidx1, align 8
-  %add = add i64 %1, %0
+  %div = div i64 %1, %0
   %arrayidx2 = getelementptr inbounds i64, ptr %x, i64 4
   %2 = load i64, ptr %arrayidx2, align 8
-  %div = div i64 %add, %2
-  ret i64 %div
+  %arrayidx3 = getelementptr inbounds i64, ptr %x, i64 6
+  %3 = load i64, ptr %arrayidx3, align 8
+  %add1 = add i64 %2, %3
+  %add2 = add i64 %add1, %div
+  ret i64 %add2
 }
