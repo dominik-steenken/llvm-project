@@ -508,6 +508,12 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
                for (auto *insn : DelInstrs)
                  dbgs() << insn->getOpcode() << " ";
                dbgs() << "]\n";
+               dbgs() << "Old Instructions:\n";
+               for (auto *insn : DelInstrs)
+                 insn->print(dbgs());
+               dbgs() << "New Instructions:\n";
+               for (auto *insn : InsInstrs)
+                 insn->print(dbgs());
              });
 
   // If we want to fix up some placeholder for some target, do it now.
