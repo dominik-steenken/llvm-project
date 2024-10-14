@@ -657,7 +657,7 @@ entry:
   %0 = load i64, ptr %x, align 8
   %arrayidx1 = getelementptr inbounds i64, ptr %x, i64 2
   %1 = load i64, ptr %arrayidx1, align 8
-  %div = div i64 %1, %0
+  %div = sdiv i64 %1, %0
   %arrayidx2 = getelementptr inbounds i64, ptr %x, i64 4
   %2 = load i64, ptr %arrayidx2, align 8
   %add1 = add i64 %div, %2
@@ -672,7 +672,7 @@ entry:
   %0 = load i64, ptr %x, align 8
   %arrayidx1 = getelementptr inbounds i64, ptr %x, i64 2
   %1 = load i64, ptr %arrayidx1, align 8
-  %div = div i64 %1, %0
+  %div = sdiv i64 %1, %0
   %arrayidx2 = getelementptr inbounds i64, ptr %x, i64 4
   %2 = load i64, ptr %arrayidx2, align 8
   %arrayidx3 = getelementptr inbounds i64, ptr %x, i64 6
