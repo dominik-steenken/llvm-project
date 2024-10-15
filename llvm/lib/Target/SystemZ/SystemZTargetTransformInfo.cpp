@@ -16,7 +16,6 @@
 #include "SystemZTargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1353,30 +1352,218 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
   return NumVectorMemOps + NumPermutes;
 }
 
+bool isBitwiseBinaryReduction(Intrinsic::ID ID) {
+  return (ID == Intrinsic::vector_reduce_and) ||
+         (ID == Intrinsic::vector_reduce_or) ||
+         (ID == Intrinsic::vector_reduce_xor);
+}
+
+typedef struct {
+  unsigned int ScalarSize;
+  unsigned int NumElements;
+  unsigned int VectorRegsNeeded;
+  unsigned int MaxElemsPerVector;
+  FixedVectorType *VTy;
+} VectorInfo;
+
+void getVectorInfo(VectorInfo &Info, Type *Type) {
+  Info.VTy = nullptr;
+  if (Type->isVectorTy()) {
+    Info.VTy = cast<FixedVectorType>(Type);
+    Info.ScalarSize = Info.VTy->getScalarSizeInBits();
+    Info.NumElements = Info.VTy->getNumElements();
+    Info.VectorRegsNeeded = getNumVectorRegs(Info.VTy);
+  }
+  Info.MaxElemsPerVector = SystemZ::VectorBits / Info.ScalarSize;
+}
+
 static int
 getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                             const SmallVectorImpl<Type *> &ParamTys) {
   if (RetTy->isVectorTy() && ID == Intrinsic::bswap)
     return getNumVectorRegs(RetTy); // VPERM
 
-  if (ID == Intrinsic::vector_reduce_add) {
-    // Retrieve number and size of elements for the vector op.
-    auto *VTy = cast<FixedVectorType>(ParamTys.front());
-    unsigned ScalarSize = VTy->getScalarSizeInBits();
+  // Holds info about vector parameters, if any.
+  VectorInfo Vinfo;
+
+  switch (ID) {
+  case Intrinsic::vector_reduce_add: {
+    getVectorInfo(Vinfo, ParamTys.front());
     // For scalar sizes >128 bits, we fall back to the generic cost estimate.
-    if (ScalarSize > SystemZ::VectorBits)
+    if (Vinfo.ScalarSize > SystemZ::VectorBits)
       return -1;
-    // This many vector regs are needed to represent the input elements (V).
-    unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
-    // This many instructions are needed for the final sum of vector elems (S).
-    unsigned LastVectorHandling = (ScalarSize < 32) ? 3 : 2;
+    // This many instructions are needed for the final sum of vector elems
+    // (S).
+    unsigned LastVectorHandling = (Vinfo.ScalarSize < 32) ? 3 : 2;
     // We use vector adds to create a sum vector, which takes
     // V/2 + V/4 + ... = V - 1 operations.
     // Then, we need S operations to sum up the elements of that sum vector,
     // for a total of V + S - 1 operations.
-    int Cost = VectorRegsNeeded + LastVectorHandling - 1;
+    return Vinfo.VectorRegsNeeded + LastVectorHandling - 1;
+  }
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_mul: {
+    getVectorInfo(Vinfo, ParamTys.front());
+    // special case handling for bitwise binary i1, since the generated code
+    // is very different.
+    if ((Vinfo.ScalarSize == 1) && isBitwiseBinaryReduction(ID)) {
+      switch (Vinfo.NumElements) {
+      // v1i1 uses 1 instruction.
+      case 1:
+        return 1;
+      // other powers of 2 up to 128 use 3 instructions.
+      case 2:
+      case 4:
+      case 8:
+      case 16:
+      case 32:
+      case 64:
+      case 128:
+        return 3;
+      // element counts outside of that generate unexcpectedly long code. Fall
+      // back to default.
+      default:
+        return -1;
+      }
+    }
+    // Cost estimates only up to i128
+    if (Vinfo.ScalarSize > SystemZ::VectorBits)
+      return -1;
+    // The remainder is for vector reductions on legal integer types.
+    // This many instructions are needed for the final sum of vector elems
+    // (S).
+    unsigned LastVectorHandling =
+        2 * Log2_32_Ceil(std::min(Vinfo.NumElements, Vinfo.MaxElemsPerVector));
+    // We use vector ops to create an aggregate vector, which takes
+    // V/2 + V/4 + ... = V - 1 operations.
+    // Then, we need S operations to continue the operation on the elements
+    // of the aggregate vector, for a total of V + S - 1 operations.
+    int Cost = Vinfo.VectorRegsNeeded + LastVectorHandling - 1;
     return Cost;
   }
+  case Intrinsic::fmuladd: {
+    getVectorInfo(Vinfo, ParamTys.front());
+    // here, we only consider the vector parm case for fmuladd.
+    if (Vinfo.VTy != nullptr) {
+      // both vXf32 and vXf64 fmuladd need getNumVectorRegs instructions
+      if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64))
+        return Vinfo.VectorRegsNeeded;
+    }
+    break;
+  }
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul: {
+    getVectorInfo(Vinfo, ParamTys.back());
+    // This computation is for vector reductions on float or double.
+    if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64)) {
+      int WholeVectors = Vinfo.NumElements / Vinfo.MaxElemsPerVector;
+      int ElementsRemaining = Vinfo.NumElements % Vinfo.MaxElemsPerVector;
+      int Cost = 0;
+      // Each element is added to the total by a single add, and each element,
+      // except for the first one, needs a `vrep` instruction to get it to
+      // position 0 in the vector. Thus, we need
+      //         2*WholeVectors*ElemsPerVector - WholeVectors
+      // instructions for elements contained in full legal vectors.
+      // For the remainder, we need 1 add for the first element, and then
+      // 2 instructions for each subsequent one, i.e.
+      //         1 + 2 * (ElementsRemaining - 1)
+      // instructions.
+      if (WholeVectors > 0) {
+        Cost += 2 * Vinfo.NumElements - WholeVectors;
+      }
+      if (ElementsRemaining > 0) {
+        Cost += 1 + 2 * (ElementsRemaining - 1);
+      }
+      return Cost;
+    }
+    break;
+  }
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimum: {
+    getVectorInfo(Vinfo, ParamTys.front());
+    // This computation is for vector reductions on float or double.
+    if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64)) {
+      // This many instructions are needed for the final vector (S).
+      unsigned LastVectorHandling =
+          2 * std::min(Vinfo.NumElements, Vinfo.MaxElemsPerVector) - 2;
+      // We use vector ops to create an aggregate vector, which takes
+      // V/2 + V/4 + ... = V - 1 operations.
+      // Then, we need 2 operations per element (S) to continue the operation
+      // on the elements of the aggregate vector, for a total of V + S - 1
+      // operations.
+      int Cost = Vinfo.VectorRegsNeeded + LastVectorHandling - 1;
+      return Cost;
+    }
+    break;
+  }
+  case Intrinsic::cttz: {
+    int ScalarSize = ParamTys.front()->getScalarSizeInBits();
+    if (ScalarSize == 1)
+      // This loads a 1, then ands w/ complement of input to check if it is 0.
+      return 2;
+    if ((ScalarSize > 1) && (ScalarSize < 64))
+      // This subtracts 1 to turn trailing 0s into 1s, then uses 2 instructions
+      // to zero out the rest of the register, then does a popcount. This also
+      // works for non-power-of-2 scalar sizes.
+      return 4;
+    if (ScalarSize == 64)
+      // Same as above, but can skip one of the instructions for zeroing out
+      // the register.
+      return 3;
+    if (ScalarSize == 128)
+      // Here the code also subtracts 1 (vgbm, vaq), ands w/ complement to get
+      // rid of the prefix, runs vpopctg and then adds both resulting counts
+      // to get the final result (vgbm, vsumqg)
+      return 6;
+    // Other bit lengths above 64 are hard to predict, so we fall back to
+    // default.
+    return -1;
+  }
+  case Intrinsic::ctlz: {
+    int ScalarSize = ParamTys.front()->getScalarSizeInBits();
+    switch (ScalarSize) {
+    // For 64 bit, call flogr.
+    case 64:
+      return 1;
+    // For other bit lengths, load and extend data into 64-bit register,
+    // call flogr, and then subtract how many 0s were added in the extension.
+    // Then, convert the result to the right bit length and store. This
+    // process takes a varying amonut of instructions depending on how the
+    // various data type lengths line up.
+    case 1:
+    case 32:
+      return 2;
+    case 8:
+    case 16:
+      return 3;
+    case 2:
+    case 4:
+      return 5;
+    // For 128 bits, we can't call flogr. Here the strategy is to shift the
+    // bits to the right and or the resulting vector to the input vector, and
+    // to continue this until it is guaranteed that all bit positions to the
+    // right of the leading 1 are also 1s. The vector is then inverted,
+    // vpopctg is called, and the resulting counts summed and returned.
+    case 128:
+      return 16;
+    // Other bit lengths are hard to predict, so we fall back to default.
+    default:
+      return -1;
+    }
+    break;
+  }
+  default:
+    return -1;
+  }
+  // otherwise, use generic cost estimate.
   return -1;
 }
 
