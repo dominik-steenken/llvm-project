@@ -1137,10 +1137,13 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
     Opc = *InverseOpcode;
   }
 
+  LLVM_DEBUG(dbgs() << "SystemZInstrInfo::isAssociativeAndCommutative(Inst("
+                    << Opc << "), Invert=" << Invert << ")";);
+
   switch (Opc) {
   default:
     break;
-  // Adds and multiplications.
+  // FP Adds and multiplications.
   case SystemZ::WFADB:
   case SystemZ::WFASB:
   case SystemZ::WFAXB:
@@ -1153,6 +1156,32 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case SystemZ::VFMSB:
     return (Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
+  case SystemZ::AR:
+  case SystemZ::AGR:
+  case SystemZ::ARK:
+  case SystemZ::AGRK:
+  case SystemZ::ALR:
+  case SystemZ::ALGR:
+  case SystemZ::ALRK:
+  case SystemZ::ALGRK:
+    auto *MBB = Inst.getParent();
+    for (auto MII = std::next(Inst.getIterator()); MII != MBB->end(); ++MII) {
+      if (MII->definesRegister(SystemZ::CC, nullptr)) {
+        // CC is dead, allow reassociation
+        return true;
+      }
+      if (MII->readsRegister(SystemZ::CC, nullptr)) {
+        // CC is live, reject reassociation
+        return false;
+      }
+    }
+    for (auto MBI = MBB->succ_begin(); MBI != MBB->succ_end(); ++MBI) {
+      if ((*MBI)->isLiveIn(SystemZ::CC)) {
+        // CC is live in subsequent block, reject reassociation
+        return false;
+      }
+    }
+    return true;
   }
 
   return false;
@@ -1183,6 +1212,40 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
     return SystemZ::VFADB;
   case SystemZ::VFSSB:
     return SystemZ::VFASB;
+  // add => sub
+  case SystemZ::AR:
+    return SystemZ::SR;
+  case SystemZ::AGR:
+    return SystemZ::SGR;
+  case SystemZ::ARK:
+    return SystemZ::SRK;
+  case SystemZ::AGRK:
+    return SystemZ::SGRK;
+  case SystemZ::ALR:
+    return SystemZ::SLR;
+  case SystemZ::ALGR:
+    return SystemZ::SLGR;
+  case SystemZ::ALRK:
+    return SystemZ::SLRK;
+  case SystemZ::ALGRK:
+    return SystemZ::SLGRK;
+  // sub => add
+  case SystemZ::SR:
+    return SystemZ::AR;
+  case SystemZ::SGR:
+    return SystemZ::AGR;
+  case SystemZ::SRK:
+    return SystemZ::ARK;
+  case SystemZ::SGRK:
+    return SystemZ::AGRK;
+  case SystemZ::SLR:
+    return SystemZ::ALR;
+  case SystemZ::SLGR:
+    return SystemZ::ALGR;
+  case SystemZ::SLRK:
+    return SystemZ::ALRK;
+  case SystemZ::SLGRK:
+    return SystemZ::ALGRK;
   default:
     return std::nullopt;
   }
