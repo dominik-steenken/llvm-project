@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
@@ -24,6 +23,7 @@
 #include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -37,6 +37,8 @@
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "generic-II"
 
 static cl::opt<bool> DisableHazardRecognizer(
   "disable-sched-hazard", cl::Hidden, cl::init(false),
@@ -929,6 +931,20 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
     // reassociation of operands to increase ILP. Specify each commutation
     // possibility for the Prev instruction in the sequence and let the
     // machine combiner decide if changing the operands is worthwhile.
+    LLVM_DEBUG(Register TargetReg = Root.getOperand(0).getReg();
+               MachineRegisterInfo &MRI =
+                   Root.getParent()->getParent()->getRegInfo();
+               if ((MRI.getRegClass(TargetReg) ==
+                    MRI.getTargetRegisterInfo()->getRegClass(
+                        4)) || // SystemZ::GR32BitRegClass
+                   (MRI.getRegClass(TargetReg) ==
+                    MRI.getTargetRegisterInfo()->getRegClass(
+                        15)) || // SystemZ::GR64BitRegClass
+                   (MRI.getRegClass(TargetReg) ==
+                    MRI.getTargetRegisterInfo()->getRegClass(16))) {
+                 dbgs() << "### Reassociation Candidate: " << Root.getOpcode()
+                        << "\n### ";
+               } Root.print(dbgs()););
     if (Commute) {
       Patterns.push_back(MachineCombinerPattern::REASSOC_AX_YB);
       Patterns.push_back(MachineCombinerPattern::REASSOC_XA_YB);
