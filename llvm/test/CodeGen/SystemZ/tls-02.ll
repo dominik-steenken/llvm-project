@@ -9,10 +9,10 @@
 define ptr@foo() {
 ; CHECK-MAIN-LABEL: foo:
 ; CHECK-MAIN: ear [[HIGH:%r[0-5]]], %a0
-; CHECK-MAIN: sllg %r2, [[HIGH]], 32
+; CHECK-MAIN: sllg %r0, [[HIGH]], 32
 ; CHECK-MAIN-DAG: ear %r2, %a1
-; CHECK-MAIN-DAG: larl %r1, x@INDNTPOFF
-; CHECK-MAIN: ag %r2, 0(%r1)
+; CHECK-MAIN-DAG: lgrl %r2, x@INDNTPOFF
+; CHECK-MAIN: agr %r2, %r0
 ; CHECK-MAIN: br %r14
   ret ptr@x
 }

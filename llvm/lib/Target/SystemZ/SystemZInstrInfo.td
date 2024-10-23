@@ -1019,11 +1019,11 @@ let Defs = [CC], CCValues = 0xF, CCIfNoSignedWrap = 1 in {
 
   // Addition of memory.
   defm AH  : BinaryRXPair<"ah", 0x4A, 0xE37A, z_sadd, GR32, z_asextloadi16, 2>;
-  defm A   : BinaryRXPairAndPseudo<"a",  0x5A, 0xE35A, z_sadd, GR32, z_load, 4>;
+  defm A   : BinaryRXPairAndPseudo<"a",  0x5A, 0xE35A, z_sadd, GR32, null_frag, 4>;
   def  AGH : BinaryRXY<"agh", 0xE338, z_sadd, GR64, z_asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
   def  AGF : BinaryRXY<"agf", 0xE318, z_sadd, GR64, z_asextloadi32, 4>;
-  defm AG  : BinaryRXYAndPseudo<"ag",  0xE308, z_sadd, GR64, z_load, 8>;
+  defm AG  : BinaryRXYAndPseudo<"ag",  0xE308, z_sadd, GR64, null_frag, 8>;
 
   // Addition to memory.
   def ASI  : BinarySIY<"asi",  0xEB6A, add, imm32sx8>;
@@ -1061,9 +1061,9 @@ let Defs = [CC], CCValues = 0xF, IsLogical = 1 in {
               Requires<[FeatureHighWord]>;
 
   // Addition of memory.
-  defm AL   : BinaryRXPairAndPseudo<"al", 0x5E, 0xE35E, z_uadd, GR32, z_load, 4>;
+  defm AL   : BinaryRXPairAndPseudo<"al", 0x5E, 0xE35E, z_uadd, GR32, null_frag, 4>;
   def  ALGF : BinaryRXY<"algf", 0xE31A, z_uadd, GR64, z_azextloadi32, 4>;
-  defm ALG  : BinaryRXYAndPseudo<"alg",  0xE30A, z_uadd, GR64, z_load, 8>;
+  defm ALG  : BinaryRXYAndPseudo<"alg",  0xE30A, z_uadd, GR64, null_frag, 8>;
 
   // Addition to memory.
   def ALSI  : BinarySIY<"alsi",  0xEB6E, null_frag, imm32sx8>;
@@ -1107,11 +1107,11 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8,
 
   // Subtraction of memory.
   defm SH  : BinaryRXPair<"sh", 0x4B, 0xE37B, z_ssub, GR32, z_asextloadi16, 2>;
-  defm S   : BinaryRXPairAndPseudo<"s", 0x5B, 0xE35B, z_ssub, GR32, z_load, 4>;
+  defm S   : BinaryRXPairAndPseudo<"s", 0x5B, 0xE35B, z_ssub, GR32, null_frag, 4>;
   def  SGH : BinaryRXY<"sgh", 0xE339, z_ssub, GR64, z_asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
   def  SGF : BinaryRXY<"sgf", 0xE319, z_ssub, GR64, z_asextloadi32, 4>;
-  defm SG  : BinaryRXYAndPseudo<"sg",  0xE309, z_ssub, GR64, z_load, 8>;
+  defm SG  : BinaryRXYAndPseudo<"sg",  0xE309, z_ssub, GR64, null_frag, 8>;
 }
 defm : SXB<z_ssub, GR64, SGFR>;
 
@@ -1159,9 +1159,9 @@ let Defs = [CC], CCValues = 0x7, IsLogical = 1 in {
   def SLGFI : BinaryRIL<"slgfi", 0xC24, z_usub, GR64, imm64zx32>;
 
   // Subtraction of memory.
-  defm SL   : BinaryRXPairAndPseudo<"sl", 0x5F, 0xE35F, z_usub, GR32, z_load, 4>;
+  defm SL   : BinaryRXPairAndPseudo<"sl", 0x5F, 0xE35F, z_usub, GR32, null_frag, 4>;
   def  SLGF : BinaryRXY<"slgf", 0xE31B, z_usub, GR64, z_azextloadi32, 4>;
-  defm SLG  : BinaryRXYAndPseudo<"slg",  0xE30B, z_usub, GR64, z_load, 8>;
+  defm SLG  : BinaryRXYAndPseudo<"slg",  0xE30B, z_usub, GR64, null_frag, 8>;
 }
 defm : ZXB<z_usub, GR64, SLGFR>;
 
@@ -1419,16 +1419,16 @@ def MSGFI : BinaryRIL<"msgfi", 0xC20, mul, GR64, imm64sx32>;
 
 // Multiplication of memory.
 defm MH   : BinaryRXPair<"mh", 0x4C, 0xE37C, mul, GR32, z_asextloadi16, 2>;
-defm MS   : BinaryRXPair<"ms", 0x71, 0xE351, mul, GR32, z_load, 4>;
+defm MS   : BinaryRXPair<"ms", 0x71, 0xE351, mul, GR32, null_frag, 4>;
 def  MGH  : BinaryRXY<"mgh", 0xE33C, mul, GR64, z_asextloadi16, 2>,
             Requires<[FeatureMiscellaneousExtensions2]>;
 def  MSGF : BinaryRXY<"msgf", 0xE31C, mul, GR64, z_asextloadi32, 4>;
-def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, z_load, 8>;
+def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, null_frag, 8>;
 
 // Multiplication of memory, setting the condition code.
 let Predicates = [FeatureMiscellaneousExtensions2], Defs = [CC] in {
-  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, z_load, 4>;
-  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, z_load, 8>;
+  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, null_frag, 4>;
+  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, null_frag, 8>;
 }
 
 // Multiplication of a register, producing two results.
@@ -1448,8 +1448,8 @@ def M   : BinaryRX <"m",   0x5C,   null_frag, GR128, z_load, 4>;
 def MFY : BinaryRXY<"mfy", 0xE35C, null_frag, GR128, z_load, 4>;
 def MG  : BinaryRXY<"mg",  0xE384, null_frag, GR128, z_load, 8>,
           Requires<[FeatureMiscellaneousExtensions2]>;
-def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, z_load, 4>;
-def MLG : BinaryRXY<"mlg", 0xE386, null_frag, GR128, z_load, 8>;
+def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, null_frag, 4>;
+def MLG : BinaryRXY<"mlg", 0xE386, null_frag, GR128, null_frag, 8>;
 
 def : Pat<(z_smul_lohi GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
           (MG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;

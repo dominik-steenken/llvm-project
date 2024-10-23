@@ -488,6 +488,35 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
                          SparseSet<LiveRegUnit> &RegUnits,
                          const TargetInstrInfo *TII, unsigned Pattern,
                          bool IncrementalUpdate) {
+
+  LLVM_DEBUG(Register TargetReg = InsInstrs.front()->getOperand(0).getReg();
+             MachineRegisterInfo &MRI =
+                 MI.getParent()->getParent()->getRegInfo();
+             if ((MRI.getRegClass(TargetReg) ==
+                  MRI.getTargetRegisterInfo()->getRegClass(
+                      4)) || // SystemZ::GR32BitRegClass
+                 (MRI.getRegClass(TargetReg) ==
+                  MRI.getTargetRegisterInfo()->getRegClass(
+                      15)) || // SystemZ::GR64BitRegClass
+                 (MRI.getRegClass(TargetReg) ==
+                  MRI.getTargetRegisterInfo()->getRegClass(
+                      16))) { // SystemZ::ADDR64BitRegClass
+               dbgs() << "MachineCombiner inserts [ ";
+               for (auto *insn : InsInstrs)
+                 dbgs() << insn->getOpcode() << " ";
+               dbgs() << "] and removes [ ";
+               for (auto *insn : DelInstrs)
+                 dbgs() << insn->getOpcode() << " ";
+               dbgs() << "]\n";
+               dbgs() << "Old Instructions:\n";
+               for (auto *insn : DelInstrs)
+                 insn->print(dbgs());
+               dbgs() << "New Instructions:\n";
+               for (auto *insn : InsInstrs)
+                 insn->print(dbgs());
+               dbgs() << "Inserted into MachineFunction " << MBB->getParent()->getName() << ".\n";
+             });
+
   // If we want to fix up some placeholder for some target, do it now.
   // We need this because in genAlternativeCodeSequence, we have not decided the
   // better pattern InsInstrs or DelInstrs, so we don't want generate some
@@ -578,6 +607,8 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
+    LLVM_DEBUG(dbgs() << "Considering MI " << MI.getDesc().getOpcode()
+                      << "\n";);
     SmallVector<unsigned, 16> Patterns;
     // The motivating example is:
     //
@@ -606,13 +637,16 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
     // machine-combiner-verify-pattern-order is enabled, all patterns are
     // checked to ensure later patterns do not provide better latency savings.
 
-    if (!TII->getMachineCombinerPatterns(MI, Patterns, DoRegPressureReduce))
+    if (!TII->getMachineCombinerPatterns(MI, Patterns, DoRegPressureReduce)) {
+      LLVM_DEBUG(dbgs() << "No Machine Combiner Patterns were returned\n";);
       continue;
+    }
 
     if (VerifyPatternOrder)
       verifyPatternOrder(MBB, MI, Patterns);
 
     for (const auto P : Patterns) {
+      LLVM_DEBUG(dbgs() << "Considering Pattern " << P << "\n";);
       SmallVector<MachineInstr *, 16> InsInstrs;
       SmallVector<MachineInstr *, 16> DelInstrs;
       DenseMap<unsigned, unsigned> InstrIdxForVirtReg;
@@ -621,8 +655,11 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
       // Found pattern, but did not generate alternative sequence.
       // This can happen e.g. when an immediate could not be materialized
       // in a single instruction.
-      if (InsInstrs.empty())
+      if (InsInstrs.empty()) {
+        LLVM_DEBUG(
+            dbgs() << "Pattern did not genearte an alternative sequence\n";);
         continue;
+      }
 
       LLVM_DEBUG(if (dump_intrs) {
         dbgs() << "\tFor the Pattern (" << (int)P
