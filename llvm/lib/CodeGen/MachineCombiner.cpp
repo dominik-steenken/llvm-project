@@ -514,6 +514,7 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
                dbgs() << "New Instructions:\n";
                for (auto *insn : InsInstrs)
                  insn->print(dbgs());
+               dbgs() << "Inserted into MachineFunction " << MBB->getParent()->getName() << ".\n";
              });
 
   // If we want to fix up some placeholder for some target, do it now.
