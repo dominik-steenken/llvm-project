@@ -3260,6 +3260,40 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   Top.init(DAG, SchedModel, &Rem);
   Bot.init(DAG, SchedModel, &Rem);
 
+  // emit statistics about int instruction heights
+  dbgs() << "### GenericScheduler::initialize\n";
+  unsigned DAGHeight = 0;
+  unsigned DAGDepth = 0;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
+    DAGDepth = std::max(DAGDepth, DAG->SUnits[Idx].getDepth());
+    unsigned Opc = DAG->SUnits[Idx].getInstr()->getOpcode();
+    switch (Opc) {
+      case 577:  // SystemZ::AR
+      case 578:  // SystemZ::ARK
+      case 570:  // SystemZ::ALR
+      case 571:  // SystemZ::ALRK
+      case 2187: // SystemZ::SR
+      case 2194: // SystemZ::SRK
+      case 2166: // SystemZ::SLR
+      case 2167: // SystemZ::SLRK
+      case 543:  // SystemZ::AGR
+      case 544:  // SystemZ::AGRK
+      case 564:  // SystemZ::ALGR
+      case 565:  // SystemZ::ALGRK
+      case 2134: // SystemZ::SGR
+      case 2135: // SystemZ::SGRK
+      case 2159: // SystemZ::SLGR
+      case 2160: // SystemZ::SLGRK
+        dbgs() << "## MI Depth: " << DAG->SUnits[Idx].getDepth()
+               << *DAG->SUnits[Idx].getInstr() << "\n";
+        break;
+      default:
+        continue;
+    }
+  }
+  dbgs() << "## DAGHeight: " << DAGHeight << " DAGDepth: " << DAGDepth << "\n";
+
   // Initialize resource counts.
 
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty, or
@@ -3888,6 +3922,40 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   Rem.init(DAG, SchedModel);
   Top.init(DAG, SchedModel, &Rem);
   Bot.init(DAG, SchedModel, &Rem);
+
+  // emit statistics about int instruction heights
+  dbgs() << "### PostGenericScheduler::initialize\n";
+  unsigned DAGHeight = 0;
+  unsigned DAGDepth = 0;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
+    DAGDepth = std::max(DAGDepth, DAG->SUnits[Idx].getDepth());
+    unsigned Opc = DAG->SUnits[Idx].getInstr()->getOpcode();
+    switch (Opc) {
+      case 577:  // SystemZ::AR
+      case 578:  // SystemZ::ARK
+      case 570:  // SystemZ::ALR
+      case 571:  // SystemZ::ALRK
+      case 2187: // SystemZ::SR
+      case 2194: // SystemZ::SRK
+      case 2166: // SystemZ::SLR
+      case 2167: // SystemZ::SLRK
+      case 543:  // SystemZ::AGR
+      case 544:  // SystemZ::AGRK
+      case 564:  // SystemZ::ALGR
+      case 565:  // SystemZ::ALGRK
+      case 2134: // SystemZ::SGR
+      case 2135: // SystemZ::SGRK
+      case 2159: // SystemZ::SLGR
+      case 2160: // SystemZ::SLGRK
+        dbgs() << "## MI Depth: " << DAG->SUnits[Idx].getDepth()
+               << *DAG->SUnits[Idx].getInstr() << "\n";
+        break;
+      default:
+        continue;
+    }
+  }
+  dbgs() << "## DAGHeight: " << DAGHeight << " DAGDepth: " << DAGDepth << "\n";
 
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty,
   // or are disabled, then these HazardRecs will be disabled.
