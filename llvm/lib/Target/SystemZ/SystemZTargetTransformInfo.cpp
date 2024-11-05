@@ -1381,6 +1381,11 @@ InstructionCost
 SystemZTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                            std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) {
+  LLVM_DEBUG(dbgs() << "Opcode " << Opcode
+                    << (TTI::requiresOrderedReduction(FMF)
+                            ? " requires ordered reduction"
+                            : " does not require ordered reduction")
+                    << ".\n";);
   if (!TTI::requiresOrderedReduction(FMF) && ST->hasVector() &&
       (Opcode == Instruction::FAdd || Opcode == Instruction::FMul)) {
     unsigned NumVectors = getNumVectorRegs(Ty);
@@ -1494,33 +1499,6 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
       // both vXf32 and vXf64 fmuladd need getNumVectorRegs instructions
       if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64))
         return Vinfo.VectorRegsNeeded;
-    }
-    break;
-  }
-  case Intrinsic::vector_reduce_fadd:
-  case Intrinsic::vector_reduce_fmul: {
-    getVectorInfo(Vinfo, ParamTys.back());
-    // This computation is for vector reductions on float or double.
-    if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64)) {
-      int WholeVectors = Vinfo.NumElements / Vinfo.MaxElemsPerVector;
-      int ElementsRemaining = Vinfo.NumElements % Vinfo.MaxElemsPerVector;
-      int Cost = 0;
-      // Each element is added to the total by a single add, and each element,
-      // except for the first one, needs a `vrep` instruction to get it to
-      // position 0 in the vector. Thus, we need
-      //         2*WholeVectors*ElemsPerVector - WholeVectors
-      // instructions for elements contained in full legal vectors.
-      // For the remainder, we need 1 add for the first element, and then
-      // 2 instructions for each subsequent one, i.e.
-      //         1 + 2 * (ElementsRemaining - 1)
-      // instructions.
-      if (WholeVectors > 0) {
-        Cost += 2 * Vinfo.NumElements - WholeVectors;
-      }
-      if (ElementsRemaining > 0) {
-        Cost += 1 + 2 * (ElementsRemaining - 1);
-      }
-      return Cost;
     }
     break;
   }
