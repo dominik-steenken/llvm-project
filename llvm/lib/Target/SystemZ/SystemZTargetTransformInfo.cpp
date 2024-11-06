@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SystemZ.h"
 #include "SystemZTargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
@@ -1369,11 +1371,34 @@ void getVectorInfo(VectorInfo &Info, Type *Type) {
 // EXPERIMENTAL
 static cl::opt<unsigned> REDLIM("redlim", cl::init(0));
 
-InstructionCost getFPReductionCost(unsigned NumVec, unsigned ScalarBits) {
+InstructionCost getFPReductionCost(unsigned NumVec, unsigned NumElems,
+                                   unsigned ScalarBits) {
   unsigned NumEltsPerVecReg = (SystemZ::VectorBits / ScalarBits);
   InstructionCost Cost = 0;
-  Cost += NumVec - 1;       // Full vector operations.
-  Cost += NumEltsPerVecReg; // Last vector scalar operations.
+  Cost += NumVec - 1; // Full vector operations.
+  Cost +=
+      std::min(NumElems, NumEltsPerVecReg); // Last vector scalar operations.
+  return Cost;
+}
+
+InstructionCost getIntAddReductionCost(unsigned NumVec, unsigned ScalarBits) {
+  InstructionCost Cost = 0;
+  // Binary Tree of N/2 + N/4 + ... operations yields N - 1 operations total.
+  Cost += NumVec - 1;
+  // For integer adds, VSUM creates shorter reductions on the final vector.
+  Cost += (ScalarBits < 32) ? 3 : 2;
+  return Cost;
+}
+
+InstructionCost getIntReductionCost(unsigned NumVec, unsigned NumElems,
+                                    unsigned ScalarBits) {
+  InstructionCost Cost = 0;
+  // Binary Tree of N/2 + N/4 + ... operations yields N - 1 operations total.
+  Cost += NumVec - 1;
+  // For each shuffle / arithmetic layer, we need 2 instructions, and we need
+  // log2(Elements in Last Vector) layers.
+  Cost +=
+      2 * Log2_32_Ceil(std::min(NumElems, SystemZ::VectorBits / ScalarBits));
   return Cost;
 }
 
@@ -1389,19 +1414,32 @@ SystemZTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   if (!TTI::requiresOrderedReduction(FMF) && ST->hasVector() &&
       (Opcode == Instruction::FAdd || Opcode == Instruction::FMul)) {
     unsigned NumVectors = getNumVectorRegs(Ty);
+    unsigned NumElems = ((FixedVectorType *)Ty)->getNumElements();
     unsigned ScalarBits = Ty->getScalarSizeInBits();
+    // we don't handle scalar sizes larger than vectors here
+    if (ScalarBits > SystemZ::VectorBits) {
+      return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+    }
+    switch (Opcode) {
+    // handle floating point arithmetic reductions
+    case Instruction::FAdd:
+    case Instruction::FMul:
+      // // EXPERIMENTAL: better to not vectorize small vectors?:
+      // unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
+      // if (NumElts <= REDLIM)
+      //   return NumVectors * 8;  // => MachineCombiner
 
-    // // EXPERIMENTAL: better to not vectorize small vectors?:
-    // unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
-    // if (NumElts <= REDLIM)
-    //   return NumVectors * 8;  // => MachineCombiner
-
-    // // EXPERIMENTAL: Return a low cost to enable heavily.
-    // return NumVectors / 2;
-
-    return getFPReductionCost(NumVectors, ScalarBits);
+      // // EXPERIMENTAL: Return a low cost to enable heavily.
+      // return NumVectors / 2;
+      return getFPReductionCost(NumVectors, NumElems, ScalarBits);
+    // handle integer arithmetic reductions
+    case Instruction::Add:
+      return getIntAddReductionCost(NumVectors, ScalarBits);
+    case Instruction::Mul:
+      return getIntReductionCost(NumVectors, NumElems, ScalarBits);
+    }
   }
-
+  // otherwise, fall back to the standard implementation
   return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 }
 
@@ -1409,16 +1447,21 @@ InstructionCost
 SystemZTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                        FastMathFlags FMF,
                                        TTI::TargetCostKind CostKind) {
-  if (Ty->isFPOrFPVectorTy() && ST->hasVectorEnhancements1()) {
+  if (ST->hasVectorEnhancements1()) {
     unsigned NumVectors = getNumVectorRegs(Ty);
+    unsigned NumElems = ((FixedVectorType *)Ty)->getNumElements();
     unsigned ScalarBits = Ty->getScalarSizeInBits();
+    if (Ty->isFPOrFPVectorTy()) {
 
-    // // EXPERIMENTAL: Return a low cost to enable heavily.
-    // return NumVectors / 2;
+      // // EXPERIMENTAL: Return a low cost to enable heavily.
+      // return NumVectors / 2;
 
-    return getFPReductionCost(NumVectors, ScalarBits);
+      return getFPReductionCost(NumVectors, NumElems, ScalarBits);
+    }
+    if (Ty->isIntOrIntVectorTy()) {
+      return getIntReductionCost(NumVectors, NumElems, ScalarBits);
+    }
   }
-
   return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 }
 
@@ -1432,28 +1475,9 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
   VectorInfo Vinfo;
 
   switch (ID) {
-  case Intrinsic::vector_reduce_add: {
-    getVectorInfo(Vinfo, ParamTys.front());
-    // For scalar sizes >128 bits, we fall back to the generic cost estimate.
-    if (Vinfo.ScalarSize > SystemZ::VectorBits)
-      return -1;
-    // This many instructions are needed for the final sum of vector elems
-    // (S).
-    unsigned LastVectorHandling = (Vinfo.ScalarSize < 32) ? 3 : 2;
-    // We use vector adds to create a sum vector, which takes
-    // V/2 + V/4 + ... = V - 1 operations.
-    // Then, we need S operations to sum up the elements of that sum vector,
-    // for a total of V + S - 1 operations.
-    return Vinfo.VectorRegsNeeded + LastVectorHandling - 1;
-  }
-  case Intrinsic::vector_reduce_umax:
-  case Intrinsic::vector_reduce_umin:
-  case Intrinsic::vector_reduce_smax:
-  case Intrinsic::vector_reduce_smin:
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
-  case Intrinsic::vector_reduce_xor:
-  case Intrinsic::vector_reduce_mul: {
+  case Intrinsic::vector_reduce_xor: {
     getVectorInfo(Vinfo, ParamTys.front());
     // special case handling for bitwise binary i1, since the generated code
     // is very different.
@@ -1499,26 +1523,6 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
       // both vXf32 and vXf64 fmuladd need getNumVectorRegs instructions
       if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64))
         return Vinfo.VectorRegsNeeded;
-    }
-    break;
-  }
-  case Intrinsic::vector_reduce_fmax:
-  case Intrinsic::vector_reduce_fmin:
-  case Intrinsic::vector_reduce_fmaximum:
-  case Intrinsic::vector_reduce_fminimum: {
-    getVectorInfo(Vinfo, ParamTys.front());
-    // This computation is for vector reductions on float or double.
-    if ((Vinfo.ScalarSize == 32) || (Vinfo.ScalarSize == 64)) {
-      // This many instructions are needed for the final vector (S).
-      unsigned LastVectorHandling =
-          2 * std::min(Vinfo.NumElements, Vinfo.MaxElemsPerVector) - 2;
-      // We use vector ops to create an aggregate vector, which takes
-      // V/2 + V/4 + ... = V - 1 operations.
-      // Then, we need 2 operations per element (S) to continue the operation
-      // on the elements of the aggregate vector, for a total of V + S - 1
-      // operations.
-      int Cost = Vinfo.VectorRegsNeeded + LastVectorHandling - 1;
-      return Cost;
     }
     break;
   }
