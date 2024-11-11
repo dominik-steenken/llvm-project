@@ -1431,6 +1431,31 @@ SystemZTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 }
 
+bool isBitwiseBinaryReduction(Intrinsic::ID ID) {
+  return (ID == Intrinsic::vector_reduce_and) ||
+         (ID == Intrinsic::vector_reduce_or) ||
+         (ID == Intrinsic::vector_reduce_xor);
+}
+
+typedef struct {
+  unsigned int ScalarSize;
+  unsigned int NumElements;
+  unsigned int VectorRegsNeeded;
+  unsigned int MaxElemsPerVector;
+  FixedVectorType *VTy;
+} VectorInfo;
+
+void getVectorInfo(VectorInfo &Info, Type *Type) {
+  Info.VTy = nullptr;
+  if (Type->isVectorTy()) {
+    Info.VTy = cast<FixedVectorType>(Type);
+    Info.ScalarSize = Info.VTy->getScalarSizeInBits();
+    Info.NumElements = Info.VTy->getNumElements();
+    Info.VectorRegsNeeded = getNumVectorRegs(Info.VTy);
+  }
+  Info.MaxElemsPerVector = SystemZ::VectorBits / Info.ScalarSize;
+}
+
 static int
 getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                             const SmallVectorImpl<Type *> &ParamTys) {
