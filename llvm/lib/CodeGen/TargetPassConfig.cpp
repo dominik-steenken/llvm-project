@@ -1149,7 +1149,7 @@ void TargetPassConfig::addMachinePasses() {
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(&PostRAMachineSinkingID);
+    //    addPass(&PostRAMachineSinkingID);
     addPass(&ShrinkWrapID);
   }
 
@@ -1480,12 +1480,12 @@ void TargetPassConfig::addOptimizedRegAlloc() {
 
     // Copy propagate to forward register uses and try to eliminate COPYs that
     // were not coalesced.
-    addPass(&MachineCopyPropagationID);
+    //    addPass(&MachineCopyPropagationID);
 
     // Run post-ra machine LICM to hoist reloads / remats.
     //
     // FIXME: can this move into MachineLateOptimization?
-    addPass(&MachineLICMID);
+    //iff     addPass(&MachineLICMID);
   }
 }
 
@@ -1499,17 +1499,17 @@ void TargetPassConfig::addMachineLateOptimization() {
   addPass(&MachineLateInstrsCleanupID);
 
   // Branch folding must be run after regalloc and prolog/epilog insertion.
-  addPass(&BranchFolderPassID);
+  //  addPass(&BranchFolderPassID);
 
   // Tail duplication.
   // Note that duplicating tail just increases code size and degrades
   // performance for targets that require Structured Control Flow.
   // In addition it can also make CFG irreducible. Thus we disable it.
-  if (!TM->requiresStructuredCFG())
-    addPass(&TailDuplicateID);
+  // if (!TM->requiresStructuredCFG())
+  //   addPass(&TailDuplicateID);
 
   // Copy propagation.
-  addPass(&MachineCopyPropagationID);
+  //  addPass(&MachineCopyPropagationID);
 }
 
 /// Add standard GC passes.
@@ -1529,11 +1529,11 @@ void TargetPassConfig::addBlockPlacement() {
                                          sampleprof::FSDiscriminatorPass::Pass2,
                                          nullptr));
   }
-  if (addPass(&MachineBlockPlacementID)) {
-    // Run a separate pass to collect block placement statistics.
-    if (EnableBlockPlacementStats)
-      addPass(&MachineBlockPlacementStatsID);
-  }
+  // if (addPass(&MachineBlockPlacementID)) {
+  //   // Run a separate pass to collect block placement statistics.
+  //   if (EnableBlockPlacementStats)
+  //     addPass(&MachineBlockPlacementStatsID);
+  // }
 }
 
 //===---------------------------------------------------------------------===//

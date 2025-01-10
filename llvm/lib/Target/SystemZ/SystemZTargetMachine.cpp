@@ -281,16 +281,16 @@ void SystemZPassConfig::addPostRegAlloc() {
 }
 
 void SystemZPassConfig::addPreSched2() {
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(&IfConverterID);
+  // if (getOptLevel() != CodeGenOptLevel::None)
+  //   addPass(&IfConverterID);
 }
 
 void SystemZPassConfig::addPreEmitPass() {
   // Do instruction shortening before compare elimination because some
   // vector instructions will be shortened into opcodes that compare
   // elimination recognizes.
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZShortenInstPass(getSystemZTargetMachine()));
+  // if (getOptLevel() != CodeGenOptLevel::None)
+  //   addPass(createSystemZShortenInstPass(getSystemZTargetMachine()));
 
   // We eliminate comparisons here rather than earlier because some
   // transformations can change the set of available CC values and we
@@ -315,15 +315,15 @@ void SystemZPassConfig::addPreEmitPass() {
   // Doing it so late makes it more likely that a register will be reused
   // between the comparison and the branch, but it isn't clear whether
   // preventing that would be a win or not.
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZElimComparePass(getSystemZTargetMachine()));
+  // if (getOptLevel() != CodeGenOptLevel::None)
+  //  addPass(createSystemZElimComparePass(getSystemZTargetMachine()));
   addPass(createSystemZLongBranchPass(getSystemZTargetMachine()));
 
   // Do final scheduling after all other optimizations, to get an
   // optimal input for the decoder (branch relaxation must happen
   // after block placement).
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(&PostMachineSchedulerID);
+  //if (getOptLevel() != CodeGenOptLevel::None)
+  //  addPass(&PostMachineSchedulerID);
 }
 
 TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {

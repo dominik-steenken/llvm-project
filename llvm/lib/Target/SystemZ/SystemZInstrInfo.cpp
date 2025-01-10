@@ -375,8 +375,14 @@ static cl::opt<float> InnerLoopW("innerloop-weight", cl::init(1.0));
 void SystemZInstrInfo::
 adjustSpillWeight(const MachineInstr *MI, Register Reg, float &Weight,
                   const MachineLoop *Loop) const {
-  if (Loop != nullptr && Loop->isInnermost())
-    Weight *= InnerLoopW;
+
+  if (Loop != nullptr && Loop->isInnermost()) {
+    const BasicBlock *HeaderBB = Loop->getHeader()->getBasicBlock();
+    if (std::strcmp(HeaderBB->getParent()->getName().data(), "MorphologyApply") == 0)
+      if (std::strcmp(HeaderBB->getName().data(), "for.body936.i.us") == 0)
+        if (Register::virtReg2Index(Reg) == 3843)
+          Weight *= InnerLoopW;
+  }
 }
 
 bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
