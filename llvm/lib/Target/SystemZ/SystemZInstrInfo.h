@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include <cstdint>
 
@@ -234,6 +235,8 @@ public:
                               int &FrameIndex) const override;
   bool isStackSlotCopy(const MachineInstr &MI, int &DestFrameIndex,
                        int &SrcFrameIndex) const override;
+  void adjustSpillWeight(const MachineInstr *MI, Register Reg,
+                         float &Weight, const MachineLoop *Loop) const override;
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,

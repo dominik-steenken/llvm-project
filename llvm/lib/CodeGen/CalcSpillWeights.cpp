@@ -278,6 +278,9 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
       if (Writes && IsExiting && LIS.isLiveOutOfMBB(LI, MBB))
         Weight *= 3;
 
+      // Let target adjust the spill weight.
+      TII.adjustSpillWeight(MI, LI.reg(), Weight, Loops.getLoopFor(MBB));
+
       TotalWeight += Weight;
     }
 

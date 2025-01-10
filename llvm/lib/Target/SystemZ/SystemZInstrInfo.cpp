@@ -368,6 +368,17 @@ bool SystemZInstrInfo::isStackSlotCopy(const MachineInstr &MI,
   return true;
 }
 
+// EXPERIMENTAL
+#include "llvm/Support/CommandLine.h"
+static cl::opt<float> InnerLoopW("innerloop-weight", cl::init(1.0));
+
+void SystemZInstrInfo::
+adjustSpillWeight(const MachineInstr *MI, Register Reg, float &Weight,
+                  const MachineLoop *Loop) const {
+  if (Loop != nullptr && Loop->isInnermost())
+    Weight *= InnerLoopW;
+}
+
 bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *&TBB,
                                      MachineBasicBlock *&FBB,

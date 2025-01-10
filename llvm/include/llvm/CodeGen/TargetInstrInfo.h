@@ -374,6 +374,9 @@ public:
     return MI->isTerminator() && isUnspillableTerminatorImpl(MI);
   }
 
+  virtual void adjustSpillWeight(const MachineInstr *MI, Register Reg,
+                                 float &Weight, const MachineLoop *Loop) const {}
+
   /// Returns the size in bytes of the specified MachineInstr, or ~0U
   /// when this function is not implemented by a target.
   virtual unsigned getInstSizeInBytes(const MachineInstr &MI) const {
