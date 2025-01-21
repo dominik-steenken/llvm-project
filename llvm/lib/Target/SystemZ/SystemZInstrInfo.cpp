@@ -347,6 +347,36 @@ Register SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return isSimpleMove(MI, FrameIndex, SystemZII::SimpleBDXStore);
 }
 
+Register SystemZInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                                     int &FrameIndex) const {
+  Register Reg;
+  if ((Reg = isLoadFromStackSlot(MI, FrameIndex)))
+    return Reg;
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasLoadFromStackSlot(MI, Accesses)) {
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
+}
+
+Register SystemZInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                                    int &FrameIndex) const {
+  Register Reg;
+  if ((Reg = isStoreToStackSlot(MI, FrameIndex)))
+    return Reg;
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasStoreToStackSlot(MI, Accesses)) {
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
+}
+
 bool SystemZInstrInfo::isStackSlotCopy(const MachineInstr &MI,
                                        int &DestFrameIndex,
                                        int &SrcFrameIndex) const {
