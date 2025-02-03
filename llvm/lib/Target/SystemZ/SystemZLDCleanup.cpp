@@ -120,6 +120,9 @@ MachineInstr *SystemZLDCleanup::ReplaceTLSCall(MachineInstr *I,
                                TII->get(TargetOpcode::COPY), SystemZ::R2D)
                                .addReg(TLSBaseAddrReg);
 
+  // record debug instr substitution for instr-ref debug info tracking
+  MF->substituteDebugValuesForInst(*I, *Copy);
+
   // Erase the TLS_LDCALL instruction.
   I->eraseFromParent();
 
