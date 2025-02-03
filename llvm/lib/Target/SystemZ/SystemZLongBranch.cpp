@@ -374,16 +374,20 @@ void SystemZLongBranch::splitBranchOnCount(MachineInstr *MI,
                                            unsigned AddOpcode) {
   MachineBasicBlock *MBB = MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
-  BuildMI(*MBB, MI, DL, TII->get(AddOpcode))
-      .add(MI->getOperand(0))
-      .add(MI->getOperand(1))
-      .addImm(-1);
+  MachineInstr *AddImm = BuildMI(*MBB, MI, DL, TII->get(AddOpcode))
+                             .add(MI->getOperand(0))
+                             .add(MI->getOperand(1))
+                             .addImm(-1);
   MachineInstr *BRCL = BuildMI(*MBB, MI, DL, TII->get(SystemZ::BRCL))
                            .addImm(SystemZ::CCMASK_ICMP)
                            .addImm(SystemZ::CCMASK_CMP_NE)
                            .add(MI->getOperand(2));
   // The implicit use of CC is a killing use.
   BRCL->addRegisterKilled(SystemZ::CC, &TII->getRegisterInfo());
+  // The result of the BRANCH ON COUNT MI is the new count in register 0, so the
+  // debug tracking needs to go to the result of the Add immediate.
+  MBB->getParent()->makeDebugValueSubstitution({MI->getDebugInstrNum(), 0},
+                                               {AddImm->getDebugInstrNum(), 0});
   MI->eraseFromParent();
 }
 
@@ -402,6 +406,8 @@ void SystemZLongBranch::splitCompareBranch(MachineInstr *MI,
                            .add(MI->getOperand(3));
   // The implicit use of CC is a killing use.
   BRCL->addRegisterKilled(SystemZ::CC, &TII->getRegisterInfo());
+  // Since we are replacing branches that did not compute any value, no debug
+  // value substitution is necessary.
   MI->eraseFromParent();
 }
 
