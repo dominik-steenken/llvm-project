@@ -462,11 +462,31 @@ void SystemZLongBranch::relaxBranch(TerminatorInfo &Terminator) {
   ++LongBranches;
 }
 
+static void checkForCCLiveness(const TerminatorInfo &T) {
+  // For Opcodes other than J and BRC, relaxing splits the branch
+  // into two ops, the first of which will clobber CC,
+  bool WillSplit = !(T.Branch->getOpcode() == SystemZ::J ||
+                     T.Branch->getOpcode() == SystemZ::BRC);
+  // This checks if CC is potentially live at the point of the
+  // branch instruction.
+  bool CanSplit = true;
+  for (MachineBasicBlock *MBB : T.Branch->getParent()->successors()) {
+    if (MBB->isLiveIn(SystemZ::CC)) {
+      CanSplit = false;
+    }
+  }
+  // If we need to split in order to relax the jump, but can't because
+  // it would clobber a live CC, we have reached an impasse.
+  if (WillSplit && !CanSplit)
+    llvm_unreachable("Splitting opcode clobbers live CC");
+}
+
 // Run a shortening pass and relax any branches that need to be relaxed.
 void SystemZLongBranch::relaxBranches() {
   SmallVector<TerminatorInfo, 16>::iterator TI = Terminators.begin();
   BlockPosition Position(Log2(MF->getAlignment()));
   for (auto &Block : MBBs) {
+    checkForCCLiveness(*TI);
     skipNonTerminators(Position, Block);
     for (unsigned BTI = 0, BTE = Block.NumTerminators; BTI != BTE; ++BTI) {
       assert(Position.Address <= TI->Address &&
