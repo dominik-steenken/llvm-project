@@ -121,7 +121,7 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
     CopyInst = BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
             TII->get(SystemZ::COPY), DestReg)
         .addReg(Src1Reg, getRegState(Src1MO) & getRegState(Src2MO));
-    MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst);
+    MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst, 1);
     MBBI->eraseFromParent();
     return;
   }
@@ -148,7 +148,7 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
   }
   // if a copy instruction was inserted, record the debug value substitution
   if (CopyInst)
-    MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst);
+    MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst, 1);
 
   // If the destination (now) matches one source, prefer this to be first.
   if (DestReg != Src1Reg && DestReg == Src2Reg) {
@@ -215,7 +215,7 @@ bool SystemZPostRewrite::expandCondMove(MachineBasicBlock &MBB,
   MachineInstr* CopyInst = BuildMI(*MoveMBB, MoveMBB->end(), DL, TII->get(SystemZ::COPY), DestReg)
       .addReg(MI.getOperand(2).getReg(), getRegState(MI.getOperand(2)));
   // record the debug value substitution for CopyInst
-  MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst);
+  MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst, 1);
   MoveMBB->addSuccessor(RestMBB);
 
   NextMBBI = MBB.end();
