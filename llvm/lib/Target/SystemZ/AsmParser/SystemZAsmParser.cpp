@@ -666,6 +666,8 @@ static struct InsnMatchEntry InsnMatchTable[] = {
   /* Format, Opcode, NumOperands, OperandKinds */
   { "e", SystemZ::InsnE, 1,
     { MCK_U16Imm } },
+  { "i", SystemZ::InsnI, 2,
+    { MCK_U16Imm, MCK_U8Imm } },
   { "ri", SystemZ::InsnRI, 3,
     { MCK_U32Imm, MCK_AnyReg, MCK_S16Imm } },
   { "rie", SystemZ::InsnRIE, 4,

@@ -2223,6 +2223,8 @@ let hasSideEffects = 1 in {
 
 let isCodeGenOnly = 1, hasSideEffects = 1 in {
   def InsnE   : DirectiveInsnE<(outs), (ins imm64zx16:$enc), ".insn e,$enc", []>;
+  def InsnI   : DirectiveInsnI<(outs), (ins imm64zx16:$enc, imm32zx8:$I1),
+                                ".insn i,$enc,$I1", []>;
   def InsnRI  : DirectiveInsnRI<(outs), (ins imm64zx32:$enc, AnyReg:$R1,
                                              imm32sx16:$I2),
                                 ".insn ri,$enc,$R1,$I2", []>;
