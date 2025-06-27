@@ -1859,6 +1859,13 @@ class DirectiveInsnI<dag outs, dag ins, string asmstr, list<dag> pattern>
     let Inst{15-8} = enc{15-8};
   }
 
+class DirectiveInsnIE<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstIE<0, outs, ins, asmstr, pattern> {
+    bits<32> enc;
+
+    let Inst{31-16} = enc{31-16};
+  }
+
 class DirectiveInsnRI<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRIa<0, outs, ins, asmstr, pattern> {
   bits<32> enc;

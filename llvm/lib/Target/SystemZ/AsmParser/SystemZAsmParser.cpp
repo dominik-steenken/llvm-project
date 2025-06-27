@@ -668,6 +668,8 @@ static struct InsnMatchEntry InsnMatchTable[] = {
     { MCK_U16Imm } },
   { "i", SystemZ::InsnI, 2,
     { MCK_U16Imm, MCK_U8Imm } },
+  { "ie", SystemZ::InsnIE, 3,
+    { MCK_U32Imm, MCK_U4Imm, MCK_U4Imm } },
   { "ri", SystemZ::InsnRI, 3,
     { MCK_U32Imm, MCK_AnyReg, MCK_S16Imm } },
   { "rie", SystemZ::InsnRIE, 4,
