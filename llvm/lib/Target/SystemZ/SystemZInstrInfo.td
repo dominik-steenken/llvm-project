@@ -2228,6 +2228,10 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
   def InsnIE  : DirectiveInsnIE<(outs), (ins imm64zx32:$enc, imm32zx4:$I1,
                                              imm32zx4:$I2),
                                 ".insn ie,$enc,$I1,$I2", []>;
+  def InsnMII : DirectiveInsnMII<(outs),
+                                 (ins imm64zx48:$enc, imm32zx4:$M1,
+                                     brtarget12bpp:$RI2, brtarget24bpp:$RI3),
+                                 ".insn mii,$enc,$M1,$RI2,$RI3", []>;
   def InsnRI  : DirectiveInsnRI<(outs), (ins imm64zx32:$enc, AnyReg:$R1,
                                              imm32sx16:$I2),
                                 ".insn ri,$enc,$R1,$I2", []>;

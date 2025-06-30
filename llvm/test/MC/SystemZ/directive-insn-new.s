@@ -10,3 +10,7 @@
 
 #CHECK: b2 fa 00 12           niai 1, 2
   .insn ie,0xb2fa0000,0x1,0x2
+
+#CHECK: c5 f1 00 00 10 00  bprp 15, 0x206, 0x2006
+  .insn mii,0xc50000000000,15,512,8192
+  
