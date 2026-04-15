@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple s390x-linux-gnu -filetype=obj %s | \
-# RUN: llvm-objdump --mcpu=zEC12 -d - | FileCheck %s
+# RUN: llvm-objdump --mcpu=z13 -d - | FileCheck %s
 
 # Test the .insn directive which provides a way of encoding an instruction
 # directly. It takes a format, encoding, and operands based on the format.
@@ -232,3 +232,16 @@ label.rsi:
 
 #CHECK: e9 12 34 56 78 90      pka 1110(%r3), 2192(19,%r7)
       .insn ss_f,0xe90000000000,1110(%r3),2192(19,%r7)
+
+#CHECK: c0 04 00 00 00 03      jgnop 0x17a
+      .insn ril_c,0xc00400000000,0,label.autogen_ril_c
+label.autogen_ril_c:
+
+#CHECK: e7 12 34 56 70 4a     vftci %v1, %v2, 837, 7, 6
+      .insn vri_e,0xe7000000004a,%v1,%v2,837,7,6
+
+#CHECK: e7 16 00 00 30 21     vlgvg %r1, %v6, 0
+      .insn vrs,0xe70000000021,%r1,%v6,0(%r0),3
+
+#CHECK: e3 12 34 56 78 16      llgf %r1, 492630(%r2,%r3)
+      .insn rxy_a,0xe30000000016,%r1,492630(%r2,%r3)

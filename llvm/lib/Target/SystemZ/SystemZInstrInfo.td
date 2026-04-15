@@ -2527,7 +2527,7 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
   def InsnVRIg
       : DirectiveInsnVRIg<(outs),
                           (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
-                              imm32zx8:$I3, imm32zx16:$I4, imm32zx4:$M5),
+                              imm32zx8:$I3, imm32zx8:$I4, imm32zx4:$M5),
                           ".insn vri_g,$enc,$V1,$V2,$I3,$I4,$M5", []>;
   def InsnVRIh
       : DirectiveInsnVRIh<(outs),
