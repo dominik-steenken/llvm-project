@@ -1760,6 +1760,15 @@ class InstVSI<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 // Instruction classes for .insn directives
 //===----------------------------------------------------------------------===//
+// Base class for all .insn directive instructions
+// This marker class is used to identify .insn directive instructions
+// for the SystemZInsnDirectiveEmitter. It must be the rightmost parent
+// in the inheritance list to ensure these properties take precedence.
+class InsnDirectiveBase {
+  bit isCodeGenOnly = 1;
+  bit hasSideEffects = 1;
+}
+
 
 class DirectiveInsnE<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstE<0, outs, ins, asmstr, pattern> {
