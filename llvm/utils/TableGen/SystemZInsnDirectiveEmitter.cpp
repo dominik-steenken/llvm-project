@@ -100,18 +100,8 @@ static InsnMatchEntry buildInsnMatchEntry(const Record &Def) {
 static void emitInsnDirectiveMatchTable(const RecordKeeper &RK,
                                         raw_ostream &OS) {
   SmallVector<InsnMatchEntry, 128> Entries;
-  for (const Record *Def : RK.getAllDerivedDefinitions("InstSystemZ")) {
-    // Identify .insn directives by
-    // - having a name starting with "Insn"
-    // - being a codegen-only instruction
-    // - having its asmstring start with .insn
-    if (Def->getName().find("Insn") != 0)
-      continue;
-    if (!Def->getValueAsBit("isCodeGenOnly"))
-      continue;
-    if (Def->getValueAsString("AsmString").find(".insn ") != 0)
-      continue;
-
+  // All .insn directive instructions inherit from InsnDirectiveBase
+  for (const Record *Def : RK.getAllDerivedDefinitions("InsnDirectiveBase")) {
     Entries.push_back(buildInsnMatchEntry(*Def));
   }
 

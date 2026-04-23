@@ -2611,7 +2611,7 @@ let hasSideEffects = 1 in {
                                    (ins imm64zx48:$enc, VR128:$V1,
                                        (bdaddr12only $B2, $D2):$BD2, VR128:$V3,
                                        imm32zx4:$M4),
-                                   ".insn_a vrs_a,$enc,$V1,$BD2,$V3,$M4", []>, InsnDirectiveBase;
+                                   ".insn vrs_a,$enc,$V1,$BD2,$V3,$M4", []>, InsnDirectiveBase;
   def InsnVRSb : DirectiveInsnVRSb<(outs),
                                    (ins imm64zx48:$enc, VR128:$V1,
                                        (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3,
