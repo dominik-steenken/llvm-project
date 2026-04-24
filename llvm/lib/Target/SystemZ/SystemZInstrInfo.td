@@ -2278,6 +2278,7 @@ def InsnRIc
   let Inst{31 -24} = enc{31 -24};
   let Inst{19 -16} = enc{19 -16};
 }
+// RIE base format - legacy operand order preserved
 def InsnRIE
     : InstRIEd<0, (outs),
                (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$I2),
@@ -2497,6 +2498,7 @@ def InsnRRS : InstRRS<0, (outs),
   let Inst{47 -40} = enc{47 -40};
   let Inst{7 -0} = enc{7 -0};
 }
+// RS - legacy operand order preserved
 def InsnRS : InstRSa<0, (outs),
                      (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3,
                          (bdaddr12only $B2, $D2):$BD2),
@@ -2524,6 +2526,7 @@ def InsnRSb : InstRSb<0, (outs),
 
   let Inst{31 -24} = enc{31 -24};
 }
+// RRSE - legacy operand order preserved
 def InsnRSE : InstRSEa<6, (outs),
                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
                            (bdaddr12only $B2, $D2):$BD2),
@@ -2534,6 +2537,7 @@ def InsnRSE : InstRSEa<6, (outs),
   let Inst{47 -40} = enc{47 -40};
   let Inst{7 -0} = enc{7 -0};
 }
+// RSI - legacy operand order preserved
 def InsnRSI
     : InstRSI<0, (outs),
               (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$RI2),
@@ -2562,6 +2566,7 @@ def InsnRSLb
   let Inst{47 -40} = enc{47 -40};
   let Inst{7 -0} = enc{7 -0};
 }
+// RSY - legacy operand order preserved
 def InsnRSY : InstRSYa<0, (outs),
                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
                            (bdaddr20only $B2, $D2):$BD2),
@@ -2623,6 +2628,7 @@ def InsnRXE : InstRXE<0, (outs),
   let Inst{47 -40} = enc{47 -40};
   let Inst{7 -0} = enc{7 -0};
 }
+// RXF - legacy operand order preserved
 def InsnRXF : InstRXF<0, (outs),
                       (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
                           (bdxaddr12only $B2, $D2, $X2):$XBD2),
@@ -2632,6 +2638,7 @@ def InsnRXF : InstRXF<0, (outs),
   let Inst{47 -40} = enc{47 -40};
   let Inst{7 -0} = enc{7 -0};
 }
+// RXY - legacy operand order preserved
 def InsnRXY : InstRXYa<0, (outs),
                        (ins imm64zx48:$enc, AnyReg:$R1,
                            (bdxaddr20only $B2, $D2, $X2):$XBD2),
@@ -3007,6 +3014,7 @@ def InsnVRRk
   let Inst{47 -40} = enc{47 -40};
   let Inst{7 -0} = enc{7 -0};
 }
+// VRS - legacy operand order preserved
 def InsnVRS : InstVRSc<0, (outs),
                        (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V3,
                            (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M4),
