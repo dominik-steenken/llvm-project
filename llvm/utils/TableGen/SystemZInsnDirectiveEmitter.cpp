@@ -26,7 +26,7 @@ static StringRef getFormatName(const Record &Def) {
 
 static StringRef getMatchClassKind(const Record &Def, const Init *Arg,
                                    unsigned OperandIndex) {
-  static const StringMap<StringRef> SimpleKinds = {
+  static const StringMap<StringRef> KindMap = {
     {"AnyReg", "MCK_AnyReg"},
     {"VR128", "MCK_VR128"},
     {"brtarget12", "MCK_PCRel12"},
@@ -47,10 +47,7 @@ static StringRef getMatchClassKind(const Record &Def, const Init *Arg,
     {"imm64zx16", "MCK_U16Imm"},
     {"imm64zx32", "MCK_U32Imm"},
     {"imm64xx32", "MCK_X32Imm"},
-    {"imm64zx48", "MCK_U48Imm"}
-  };
-
-  static const StringMap<StringRef> AddressKinds = {
+    {"imm64zx48", "MCK_U48Imm"},
     {"bdxaddr12only", "MCK_BDXAddr64Disp12"},
     {"bdxaddr20only", "MCK_BDXAddr64Disp20"},
     {"bdaddr12only", "MCK_BDAddr64Disp12"},
@@ -63,19 +60,15 @@ static StringRef getMatchClassKind(const Record &Def, const Init *Arg,
 
   std::string ArgTextStorage = Arg->getAsString();
   StringRef ArgText(ArgTextStorage);
-
-  // Check simple mappings first
-  auto It = SimpleKinds.find(ArgText);
-  if (It != SimpleKinds.end())
-    return It->second;
-
-  // Check address mode patterns: "(type ...)"
   if (!ArgText.empty() && ArgText.front() == '(') {
-    for (const auto &[Key, Value] : AddressKinds) {
-      if (ArgText.contains(Key))
-        return Value;
-    }
+    ArgText = ArgText.drop_front();
+    ArgText = ArgText.take_while([](char C) { return C != ' '; });
   }
+
+  // Check registered mappings
+  auto It = KindMap.find(ArgText);
+  if (It != KindMap.end())
+    return It->second;
 
   PrintFatalError(&Def, "unsupported operand kind in .insn directive operand " +
                         Twine(OperandIndex) + ": " + ArgText);
