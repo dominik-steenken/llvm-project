@@ -27,36 +27,35 @@ static StringRef getFormatName(const Record &Def) {
 static StringRef getMatchClassKind(const Record &Def, const Init *Arg,
                                    unsigned OperandIndex) {
   static const StringMap<StringRef> KindMap = {
-    {"AnyReg", "MCK_AnyReg"},
-    {"VR128", "MCK_VR128"},
-    {"brtarget12", "MCK_PCRel12"},
-    {"brtarget12bpp", "MCK_PCRel12"},
-    {"brtarget16", "MCK_PCRel16"},
-    {"brtarget16bpp", "MCK_PCRel16"},
-    {"brtarget24bpp", "MCK_PCRel24"},
-    {"brtarget32", "MCK_PCRel32"},
-    {"uimm32", "MCK_U32Imm"},
-    {"imm32zx4", "MCK_U4Imm"},
-    {"imm32zx8", "MCK_U8Imm"},
-    {"imm32sx8", "MCK_X8Imm"},
-    {"imm32xx8", "MCK_X8Imm"},
-    {"imm32zx12", "MCK_U12Imm"},
-    {"imm32zx16", "MCK_U16Imm"},
-    {"imm32sx16", "MCK_S16Imm"},
-    {"imm32xx16", "MCK_X16Imm"},
-    {"imm64zx16", "MCK_U16Imm"},
-    {"imm64zx32", "MCK_U32Imm"},
-    {"imm64xx32", "MCK_X32Imm"},
-    {"imm64zx48", "MCK_U48Imm"},
-    {"bdxaddr12only", "MCK_BDXAddr64Disp12"},
-    {"bdxaddr20only", "MCK_BDXAddr64Disp20"},
-    {"bdaddr12only", "MCK_BDAddr64Disp12"},
-    {"bdaddr20only", "MCK_BDAddr64Disp20"},
-    {"bdvaddr12only", "MCK_BDVAddr64Disp12"},
-    {"bdladdr12onlylen4", "MCK_BDLAddr64Disp12Len4"},
-    {"bdladdr12onlylen8", "MCK_BDLAddr64Disp12Len8"},
-    {"bdraddr12only", "MCK_BDXAddr64Disp12"}
-  };
+      {"AnyReg", "MCK_AnyReg"},
+      {"VR128", "MCK_VR128"},
+      {"brtarget12", "MCK_PCRel12"},
+      {"brtarget12bpp", "MCK_PCRel12"},
+      {"brtarget16", "MCK_PCRel16"},
+      {"brtarget16bpp", "MCK_PCRel16"},
+      {"brtarget24bpp", "MCK_PCRel24"},
+      {"brtarget32", "MCK_PCRel32"},
+      {"uimm32", "MCK_U32Imm"},
+      {"imm32zx4", "MCK_U4Imm"},
+      {"imm32zx8", "MCK_U8Imm"},
+      {"imm32sx8", "MCK_X8Imm"},
+      {"imm32xx8", "MCK_X8Imm"},
+      {"imm32zx12", "MCK_U12Imm"},
+      {"imm32zx16", "MCK_U16Imm"},
+      {"imm32sx16", "MCK_S16Imm"},
+      {"imm32xx16", "MCK_X16Imm"},
+      {"imm64zx16", "MCK_U16Imm"},
+      {"imm64zx32", "MCK_U32Imm"},
+      {"imm64xx32", "MCK_X32Imm"},
+      {"imm64zx48", "MCK_U48Imm"},
+      {"bdxaddr12only", "MCK_BDXAddr64Disp12"},
+      {"bdxaddr20only", "MCK_BDXAddr64Disp20"},
+      {"bdaddr12only", "MCK_BDAddr64Disp12"},
+      {"bdaddr20only", "MCK_BDAddr64Disp20"},
+      {"bdvaddr12only", "MCK_BDVAddr64Disp12"},
+      {"bdladdr12onlylen4", "MCK_BDLAddr64Disp12Len4"},
+      {"bdladdr12onlylen8", "MCK_BDLAddr64Disp12Len8"},
+      {"bdraddr12only", "MCK_BDXAddr64Disp12"}};
 
   std::string ArgTextStorage = Arg->getAsString();
   StringRef ArgText(ArgTextStorage);
@@ -71,7 +70,7 @@ static StringRef getMatchClassKind(const Record &Def, const Init *Arg,
     return It->second;
 
   PrintFatalError(&Def, "unsupported operand kind in .insn directive operand " +
-                        Twine(OperandIndex) + ": " + ArgText);
+                            Twine(OperandIndex) + ": " + ArgText);
 }
 
 static InsnMatchEntry buildInsnMatchEntry(const Record &Def) {
@@ -106,8 +105,7 @@ static void emitInsnDirectiveMatchTable(const RecordKeeper &RK,
   OS << "/* Format, Opcode, NumOperands, OperandKinds */\n";
   for (const InsnMatchEntry &Entry : Entries) {
     OS << "  {\"" << StringRef(Entry.Format) << "\", "
-       << StringRef(Entry.Opcode) << ", "
-       << Entry.OperandKinds.size() << ", {";
+       << StringRef(Entry.Opcode) << ", " << Entry.OperandKinds.size() << ", {";
     for (unsigned I = 0; I < Entry.OperandKinds.size(); ++I) {
       if (I != 0)
         OS << ", ";

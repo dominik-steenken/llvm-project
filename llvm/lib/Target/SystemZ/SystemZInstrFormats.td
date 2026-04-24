@@ -1769,7 +1769,6 @@ class InsnDirectiveBase {
   bit hasSideEffects = 1;
 }
 
-
 class DirectiveInsnI<dag outs, dag ins, string asmstr, list<dag> pattern>
     : InstI<0, outs, ins, asmstr, pattern> {
   bits<16> enc;
@@ -1823,50 +1822,7 @@ class DirectiveInsnRIEa<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7 -0} = enc{7 -0};
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // RRF-b is identical to RRF-a, and is thus omitted
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 //===----------------------------------------------------------------------===//
 // Variants of instructions with condition mask
